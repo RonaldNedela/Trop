@@ -154,7 +154,13 @@ actor PlaybackStateService {
             let trackingUrl = await getCachedTrackingUrl(videoId: videoId)
             if let trackingUrl {
                 Log.playbackState.debug("Sending playback to YTM for tracking")
-                try await InnerTubeClient.tropShared.registerPlayback(trackingUrl: trackingUrl)
+                Task {
+                    do {
+                        try await InnerTubeClient.tropShared.registerPlayback(trackingUrl: trackingUrl)
+                    } catch {
+                        Log.playbackState.error("YTM playback registration failed: \(error)")
+                    }
+                }
             } else {
                 Log.playbackState.debug("No cached tracking URL for videoId=\(videoId) — skipping YTM registration")
             }

@@ -737,7 +737,7 @@ private struct EpisodeRowView: View {
     var onTap: () -> Void
     var onNavigate: ((DetailRoute) -> Void)?
 
-    @Environment(\.downloadManager) private var downloadManager
+    @ObservedObject private var downloadManager = DownloadManager.shared
     @State private var progress: Double = 0
     @State private var hasResume = false
     @State private var showMenu = false

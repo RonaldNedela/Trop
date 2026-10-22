@@ -41,6 +41,8 @@ final class PlayerController {
     private var detectedCropRepeatCount = 0
     var currentLoudnessDb: Double?
     var pendingURL: String?
+    nonisolated(unsafe) var desiredPlaying = false
+    private var wasPlayingBeforeInterruption = false
 
     /// Video-mode state. Reads happen on the event loop thread from event handlers;
     /// writes happen on the main actor from `setVideoMode` / `loadFileReplacing`.
@@ -102,6 +104,7 @@ final class PlayerController {
         assertAudioSession()
         setupRemoteCommands()
         observeInterruptions()
+        observeAudioSessionReset()
         startMpv()
     }
 
@@ -176,6 +179,8 @@ extension PlayerController {
         if isNewSong {
             await PlaybackStateService.shared.stopTracking()
         }
+        desiredPlaying = true
+        assertAudioSession()
         loadedMuxedURL = nil
         loadedVideoOnlyURL = nil
         voWarmedVideoId = nil
@@ -205,12 +210,15 @@ extension PlayerController {
             "TRANSITION play videoId=\(videoId ?? "nil") isNewSong=\(isNewSong) muxedActive=\(muxedActive) url=\(url.absoluteString.prefix(80))"
         )
         let absoluteString = url.absoluteString
-        let cmdResult = withMpv { mpv in
-            ["loadfile", absoluteString, "replace"].withUnsafeCArg { mpv_command(mpv, $0) }
+        let loadArguments = ["loadfile", absoluteString, "replace"]
+        let cmdResult = withMpv { mpv -> Int32 in
+            mpv_set_property_string(mpv, "pause", "no")
+            return loadArguments.withUnsafeCArg { mpv_command(mpv, $0) }
         } ?? -1
         if cmdResult != 0 {
             Log.player.error("mpv_command loadfile failed result=\(cmdResult)")
         }
+        playState.send(.playing)
         NowPlaying.shared.isPlaying = true
         NowPlaying.shared.currentTime = 0
         NowPlaying.shared.duration = max(0, duration ?? 0)
@@ -226,6 +234,7 @@ extension PlayerController {
     }
 
     func setPaused(_ paused: Bool) {
+        desiredPlaying = !paused
         let currentlyPaused = playState.value != .playing
         guard currentlyPaused != paused else {
             updateNowPlayingProgress()
@@ -330,7 +339,8 @@ extension PlayerController {
                     self.pendingURL = nil
                     Log.player.info("mpv ready: loading deferred URL \(url.prefix(80))")
                     _ = self.withMpv { mpv in
-                        ["loadfile", url, "replace"].withUnsafeCArg { mpv_command(mpv, $0) }
+                        mpv_set_property_string(mpv, "pause", "no")
+                        return ["loadfile", url, "replace"].withUnsafeCArg { mpv_command(mpv, $0) }
                     }
                 }
             }
@@ -435,6 +445,11 @@ extension PlayerController {
     nonisolated private func handleFileLoaded(_ mpv: OpaquePointer) {
         var pauseFlag = Int32(1)
         mpv_get_property(mpv, "pause", MPV_FORMAT_FLAG, &pauseFlag)
+        if pauseFlag != 0, desiredPlaying {
+            var unpause = Int32(0)
+            mpv_set_property(mpv, "pause", MPV_FORMAT_FLAG, &unpause)
+            mpv_get_property(mpv, "pause", MPV_FORMAT_FLAG, &pauseFlag)
+        }
         let actuallyPlaying = pauseFlag == 0
         let aoPtr = mpv_get_property_string(mpv, "current-ao")
         if let aoPtr { mpv_free(aoPtr) }
@@ -532,14 +547,14 @@ extension PlayerController {
             Log.player.debug(
                 "TRANSITION END_FILE reason=\(reason.rawValue) isEof=\(isEof) isError=\(isError) stoppedVideoId=\(videoId ?? "nil")"
             )
-            if isEof || isError, videoId != nil {
+            if isError, videoId != nil {
                 Task { await PlaybackStateService.shared.stopTracking() }
             }
-            self.currentVideoId = nil
             if isEof {
                 self.playState.send(.stopped)
                 NowPlaying.shared.stopped(videoId: videoId, isEof: true)
             } else if isError {
+                self.currentVideoId = nil
                 self.playState.send(.stopped)
                 NowPlaying.shared.stopped(videoId: videoId, isEof: false)
             } else {
@@ -884,7 +899,9 @@ extension PlayerController {
     func assertAudioSession() {
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+            if session.category != .playback || session.mode != .default {
+                try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+            }
             try session.setActive(true)
         } catch {
             Log.player.error("Failed to assert audio session: \(error)")
@@ -911,21 +928,51 @@ extension PlayerController {
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
 
-        Log.player.info("AUDIO_INTERRUPTION began")
         switch type {
         case .began:
-            if playState.value == .playing { Task { @MainActor in togglePlayPause() } }
+            Log.player.info("AUDIO_INTERRUPTION began")
+            wasPlayingBeforeInterruption = desiredPlaying || playState.value == .playing
+            if playState.value == .playing {
+                Task { @MainActor in
+                    self.setPaused(true)
+                    self.desiredPlaying = self.wasPlayingBeforeInterruption
+                }
+            }
         case .ended:
             Log.player.info("AUDIO_INTERRUPTION ended")
-            if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
-                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
-                if options.contains(.shouldResume) {
-                    assertAudioSession()
-                    if playState.value == .paused { Task { @MainActor in togglePlayPause() } }
+            let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+            let shouldResume = options.contains(.shouldResume) || wasPlayingBeforeInterruption
+            Task { @MainActor in
+                guard shouldResume else { return }
+                self.assertAudioSession()
+                if self.playState.value != .playing {
+                    self.setPaused(false)
                 }
+                self.wasPlayingBeforeInterruption = false
             }
         @unknown default:
             break
+        }
+    }
+
+    private func observeAudioSessionReset() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAudioSessionReset),
+            name: AVAudioSession.mediaServicesWereResetNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleAudioSessionReset() {
+        Log.player.notice("AUDIO_SESSION reset")
+        Task { @MainActor in
+            self.assertAudioSession()
+            self.setNowPlayingMetadata()
+            if self.desiredPlaying, self.playState.value != .playing {
+                self.setPaused(false)
+            }
         }
     }
 
@@ -978,6 +1025,7 @@ extension PlayerController {
             nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        MPNowPlayingInfoCenter.default().playbackState = np.isPlaying ? .playing : .paused
         Log.player.info(
             "NOW_PLAYING_PUBLISH title='\(np.title)' artist='\(np.artist)' " +
             "duration=\(duration) rate=\(nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] ?? 0) " +
@@ -1014,6 +1062,7 @@ extension PlayerController {
         info[MPNowPlayingInfoPropertyPlaybackQueueCount] = np.queueSongs.count
         nowPlayingInfo = info
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        MPNowPlayingInfoCenter.default().playbackState = np.isPlaying ? .playing : .paused
     }
 }
 
@@ -1090,6 +1139,16 @@ extension PlayerController {
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // Keep the audio session alive while the screen is locked so
+                // auto-advance can keep playing without user interaction.
+                if self.desiredPlaying {
+                    self.assertAudioSession()
+                }
+                self.setNowPlayingMetadata()
+                self.updateNowPlayingProgress()
+            }
             for delaySeconds in [0.6, 3] as [Double] {
                 Task { @MainActor [weak self] in
                     try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
@@ -1097,6 +1156,18 @@ extension PlayerController {
                     self.setNowPlayingMetadata()
                     self.updateNowPlayingProgress()
                 }
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.assertAudioSession()
+                self.updateNowPlayingProgress()
             }
         }
     }

@@ -13,7 +13,7 @@ struct SongMenuSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.settingsStore) private var settings
-    @Environment(\.downloadManager) private var downloadManager
+    @ObservedObject private var downloadManager = DownloadManager.shared
     @ObservedObject private var likeStore = LikeStore.shared
 
     enum Destination: Hashable {

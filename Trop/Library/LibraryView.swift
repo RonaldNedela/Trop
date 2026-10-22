@@ -22,7 +22,7 @@ struct LibraryView: View {
     @State private var playlistSongCounts: [String: Int] = [:]
 
     @ObservedObject private var router = AppRouter.shared
-    @Environment(\.downloadManager) private var downloadManager
+    @ObservedObject private var downloadManager = DownloadManager.shared
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 

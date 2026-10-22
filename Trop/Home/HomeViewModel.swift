@@ -39,22 +39,21 @@ final class HomeViewModel {
     private var cachedLocalSections: [HomeSection] = []
     private var cachedPhase2Sections: [HomeSection] = []
 
-    private nonisolated(unsafe) var chipTask: Task<Void, Never>?
-    private nonisolated(unsafe) var notificationObserver: NSObjectProtocol?
+    private let cleanup = HomeViewModelCleanup()
 
     deinit {
-        if let observer = notificationObserver {
+        if let observer = cleanup.notificationObserver {
             NotificationCenter.default.removeObserver(observer)
         }
-        chipTask?.cancel()
+        cleanup.chipTask?.cancel()
     }
 
     init() {
         hideExplicit = SettingsStore.shared.hideExplicit
-        if let existing = notificationObserver {
+        if let existing = cleanup.notificationObserver {
             NotificationCenter.default.removeObserver(existing)
         }
-        notificationObserver = NotificationCenter.default.addObserver(
+        cleanup.notificationObserver = NotificationCenter.default.addObserver(
             forName: .personalizationDataUpdated,
             object: nil,
             queue: .main
@@ -286,7 +285,7 @@ final class HomeViewModel {
     }
 
     func toggleChip(_ chip: HomePage.Chip?) {
-        chipTask?.cancel()
+        cleanup.chipTask?.cancel()
         if chip == nil || chip?.title == selectedChip?.title {
             homePage = previousHomePage
             previousHomePage = nil
@@ -301,7 +300,7 @@ final class HomeViewModel {
 
         selectedChip = chip
         let generation = loadGeneration
-        chipTask = Task {
+        cleanup.chipTask = Task {
             do {
                 let json = try await InnerTubeClient.tropShared.browse(
                     browseId: "FEmusic_home",
@@ -448,4 +447,9 @@ final class HomeViewModel {
         case .moodAndGenres: return 15
         }
     }
+}
+
+private final class HomeViewModelCleanup: @unchecked Sendable {
+    var chipTask: Task<Void, Never>?
+    var notificationObserver: NSObjectProtocol?
 }

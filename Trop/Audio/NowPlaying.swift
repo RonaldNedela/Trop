@@ -339,6 +339,7 @@ final class NowPlaying {
             isPlaying = false
             stopTimer()
             PlayerController.shared.updateNowPlayingProgress()
+            Task { await PlaybackStateService.shared.stopTracking() }
         }
     }
 

@@ -50,6 +50,9 @@ struct FullPlayerView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let horizontalPadding: CGFloat = geometry.size.width < 375 ? 24 : 32
+            let isCompact = geometry.size.height < 700
+
             ZStack {
                 if np.isVideoMode && np.hasVideo {
                     Color.black
@@ -81,7 +84,10 @@ struct FullPlayerView: View {
                 if !showLyrics && !showQueue && !np.isVideoMode {
                     artwork
                         .frame(maxWidth: .infinity)
-                        .frame(height: (geometry.size.height + geometry.safeAreaInsets.top) * 0.58)
+                        .frame(height: min(
+                            (geometry.size.height + geometry.safeAreaInsets.top) * 0.58,
+                            geometry.size.height * 0.66
+                        ))
                         .compositingGroup()
                         .clipped()
                         .mask {
@@ -133,22 +139,13 @@ struct FullPlayerView: View {
                             progressSlider: { progressSlider }
                         )
                     } else {
-                        Color.clear.frame(height: 8)
+                        Color.clear.frame(height: isCompact ? 4 : 8)
 
-                        Color.clear
-                            .aspectRatio(1, contentMode: .fit)
-                            .padding(.horizontal, 32)
-                            .allowsHitTesting(false)
-
-                        Color.clear.frame(height: np.isVideoMode ? 12 : 16)
+                        Spacer(minLength: isCompact ? 8 : 16)
 
                         titleAndActionsRow
-                            .padding(.top, 20)
-                            .padding(.horizontal, 32)
-                            .padding(.bottom, 16)
-                            .offset(y: 20)
-
-                        Spacer(minLength: geometry.size.height * 0.04)
+                            .padding(.horizontal, horizontalPadding)
+                            .padding(.bottom, isCompact ? 10 : 14)
 
                         Group {
                             if let activeLyricText {
@@ -172,7 +169,7 @@ struct FullPlayerView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .padding(.horizontal, 32)
+                                .padding(.horizontal, horizontalPadding)
                                 .padding(.bottom, 8)
                                 .accessibilityLabel("Current lyric: \(activeLyricText). Open lyrics")
                             } else {
@@ -184,9 +181,7 @@ struct FullPlayerView: View {
 
                         progressSlider
                             .padding(.top, 4)
-                            .padding(.bottom, 16)
-
-                        Color.clear.frame(height: 8)
+                            .padding(.bottom, isCompact ? 8 : 12)
 
                         PlaybackControlsRow(
                             isPlaying: np.isPlaying,
@@ -196,17 +191,17 @@ struct FullPlayerView: View {
                             onPlayPause: { player.togglePlayPause() },
                             onNext: { np.playNext() }
                         )
+                        .scaleEffect(isCompact ? 0.94 : 1)
                         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: np.isPlaying)
-                        .padding(.bottom, 8)
-
-                        Color.clear.frame(height: 12)
+                        .padding(.bottom, isCompact ? 2 : 8)
 
                         SecondaryActionsRow(
                             showQueue: $showQueue,
                             isRepeatOn: $np.isRepeatOn
                         )
+                        .scaleEffect(isCompact ? 0.92 : 1)
 
-                        Color.clear.frame(height: 8)
+                        Color.clear.frame(height: isCompact ? 2 : 8)
                     }
                 }
             }
@@ -309,7 +304,7 @@ struct FullPlayerView: View {
     }
 
     private var titleAndActionsRow: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 12) {
             PlayerTitleBlock(
                 title: np.title,
                 artist: np.displayArtist,
@@ -317,10 +312,10 @@ struct FullPlayerView: View {
                 titleFont: .title3.weight(.bold),
                 titleHeight: 28
             )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
-            Spacer()
-
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 PlayerLikeButton(isLiked: isLiked) {
                     guard let song = np.queueSongs.indices.contains(np.queueIndex) ? np.queueSongs[np.queueIndex] : nil else { return }
                     Task { await likeStore.toggle(song: song) }

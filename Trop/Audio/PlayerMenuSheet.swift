@@ -28,7 +28,7 @@ struct PlayerMenuSheet: View {
     @State private var showArtistPicker = false
     @State private var showRadioOptions = false
     @State private var isResolvingArtist = false
-    @Environment(\.downloadManager) private var downloadManager
+    @ObservedObject private var downloadManager = DownloadManager.shared
 
     var body: some View {
         SheetChrome {
