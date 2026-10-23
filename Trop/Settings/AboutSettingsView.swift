@@ -22,7 +22,7 @@ struct AboutSettingsView: View {
             }
 
             Section {
-                Link(destination: URL(string: "https://github.com/686udjie/Trop")!) {
+                Link(destination: URL(string: "https://github.com/SwiftyMedia/Trop")!) {
                     Text("GitHub")
                 }
                 Link(destination: URL(string: "https://discord.gg/QrMwZAfU97")!) {

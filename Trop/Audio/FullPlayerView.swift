@@ -71,14 +71,15 @@ struct FullPlayerView: View {
                     )
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.8), value: playerBackgroundColors)
-
-                    Circle()
-                        .fill(playerBackgroundColors.first ?? .blue)
-                        .frame(width: 400, height: 400)
-                        .blur(radius: 120)
-                        .opacity(0.45)
-                        .offset(y: -150)
-                        .ignoresSafeArea()
+                    .overlay(alignment: .top) {
+                        Circle()
+                            .fill(playerBackgroundColors.first ?? .blue)
+                            .frame(width: 400, height: 400)
+                            .blur(radius: 120)
+                            .opacity(0.45)
+                            .offset(y: -150)
+                            .allowsHitTesting(false)
+                    }
                 }
 
                 if !showLyrics && !showQueue && !np.isVideoMode {
@@ -179,9 +180,15 @@ struct FullPlayerView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 33, alignment: .bottom)
 
-                        progressSlider
-                            .padding(.top, 4)
-                            .padding(.bottom, isCompact ? 8 : 12)
+                        HStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            progressSlider
+                                .frame(width: max(0, geometry.size.width - horizontalPadding * 2))
+                            Spacer(minLength: 0)
+                        }
+                        .frame(width: geometry.size.width)
+                        .padding(.top, 4)
+                        .padding(.bottom, isCompact ? 8 : 12)
 
                         PlaybackControlsRow(
                             isPlaying: np.isPlaying,
@@ -204,6 +211,7 @@ struct FullPlayerView: View {
                         Color.clear.frame(height: isCompact ? 2 : 8)
                     }
                 }
+                .frame(maxWidth: .infinity)
             }
             .offset(y: collapseOffset)
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: collapseOffset)
@@ -483,7 +491,6 @@ struct FullPlayerView: View {
                     .foregroundStyle(.white.opacity(0.6))
             }
         }
-        .padding(.horizontal, 32)
     }
 
 }

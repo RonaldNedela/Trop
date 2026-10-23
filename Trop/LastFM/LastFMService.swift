@@ -93,7 +93,7 @@ final class LastFMService: @unchecked Sendable {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        req.setValue("Trop/1.0 (https://github.com/686udjie/Trop)", forHTTPHeaderField: "User-Agent")
+        req.setValue("Trop/1.0 (https://github.com/SwiftyMedia/Trop)", forHTTPHeaderField: "User-Agent")
         req.timeoutInterval = 15
         guard let body = formBody(params: params, secret: LastFMDefaults.secret) else {
             throw LastFMError.invalidResponse
@@ -287,7 +287,7 @@ final class LastFMService: @unchecked Sendable {
         }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.setValue("Trop/1.0 (https://github.com/686udjie/Trop)", forHTTPHeaderField: "User-Agent")
+        req.setValue("Trop/1.0 (https://github.com/SwiftyMedia/Trop)", forHTTPHeaderField: "User-Agent")
         req.timeoutInterval = 10
         do {
             let (data, resp) = try await URLSession.shared.data(for: req)
