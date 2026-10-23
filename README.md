@@ -26,20 +26,20 @@ Requires iOS 26 or later and a YouTube Music account (sign in through the in-app
 
 ### Feather / AltStore / SideStore
 
-Add the Trop source, then install the nightly IPA (unsigned - your client re-signs it with your Apple ID):
+Add the Trop source, then install the latest stable release (unsigned - your client re-signs it with your Apple ID):
 
 ```
-https://raw.githubusercontent.com/686udjie/Trop/main/altstore.json
+https://raw.githubusercontent.com/SwiftyMedia/Trop/main/altstore.json
 ```
 
 
 > **Note:** AltStore PAL is not supported.
 
-Nightlies are published from each successful push to `main` as the floating [`nightly`](../../releases/tag/nightly) release.
+Stable releases are available from the [releases page](../../releases). Nightly builds are available in the[Actions](../../actions) tab.
 
 ### Manual Installation
 
-The latest stable IPA is on the [releases page](../../releases). Nightly IPAs are also built on each commit via [Actions](../../actions). You can also build an unsigned IPA yourself with `./build_ipa.sh` (output at `build/Trop.ipa`).
+ To build an unsigned IPA locally, run `./build_ipa.sh`; the output is `build/Trop.ipa`.
 
 ## Notable mentions
 
