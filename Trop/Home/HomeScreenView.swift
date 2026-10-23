@@ -11,7 +11,7 @@ struct HomeScreenView: View {
     @Environment(SettingsStore.self) private var settings
     @ObservedObject private var router = AppRouter.shared
     @State private var viewModel = HomeViewModel()
-    @StateObject private var loginModel = LoginViewModel()
+    private let accountState = AccountSheetState.shared
 
     @State private var pendingRoute: DetailRoute?
     @State private var speedDialEntries: [SpeedDialEntry] = []
@@ -21,10 +21,10 @@ struct HomeScreenView: View {
             VStack(spacing: 0) {
                 TabHeaderView(
                     title: "Home",
-                    accountIsLoggedIn: viewModel.isLoggedIn,
-                    accountImageUrl: viewModel.accountImageUrl,
+                    accountIsLoggedIn: accountState.isLoggedIn,
+                    accountImageUrl: accountState.accountImageUrl,
                     onHistory: { router.homePath.append(DetailRoute.history) },
-                    onAccount: { viewModel.tapAccount() }
+                    onAccount: { router.homePath.append(DetailRoute.settings) }
                 )
 
                 if viewModel.isLoading {
@@ -46,37 +46,13 @@ struct HomeScreenView: View {
                     pendingRoute = nil
                 }
             }
-            .sheet(isPresented: $viewModel.isLoginSheetPresented) {
-                NavigationStack {
-                    LoginWebView(model: loginModel)
-                        .ignoresSafeArea()
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("Cancel") { viewModel.isLoginSheetPresented = false }
-                            }
-                        }
-                }
-            }
-            .sheet(isPresented: $viewModel.isAccountSheetPresented) {
-                accountSheet
-            }
-            .onChange(of: loginModel.isLoggedIn) { _, loggedIn in
-                if loggedIn {
-                    viewModel.isLoginSheetPresented = false
-                    viewModel.handleLogin(
-                        cookies: loginModel.cookies,
-                        sapisid: loginModel.sapisid,
-                        visitorData: loginModel.visitorData
-                    )
-                }
-            }
-            .onChange(of: viewModel.isLoginSheetPresented) { _, presented in
-                if !presented {
-                    loginModel.isPresented = false
-                }
+            .onChange(of: accountState.isLoggedIn) { _, loggedIn in
+                viewModel.handleSessionChange(loggedIn: loggedIn)
             }
             .task {
                 await viewModel.restoreSession()
+                accountState.restoreSession()
+                await accountState.fetchAccountInfo()
                 viewModel.loadHomeData()
                 await reloadSpeedDial()
                 // Trigger library sync in background
@@ -145,26 +121,6 @@ struct HomeScreenView: View {
         .onChange(of: settings.contentCountry) { _, _ in
             Task { await viewModel.refresh() }
         }
-    }
-
-    private var accountSheet: some View {
-        AccountSheetView(
-            isLoggedIn: viewModel.isLoggedIn,
-            titleText: viewModel.accountName,
-            accountImageUrl: viewModel.accountImageUrl,
-            onDone: { viewModel.isAccountSheetPresented = false },
-            onLogin: {
-                viewModel.isAccountSheetPresented = false
-                DispatchQueue.main.async {
-                    viewModel.isLoginSheetPresented = true
-                }
-            },
-            onSettings: {
-                viewModel.isAccountSheetPresented = false
-                router.homePath.append(DetailRoute.settings)
-            },
-            onSignOut: { viewModel.logout() }
-        )
     }
 
     @ViewBuilder

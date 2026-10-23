@@ -58,6 +58,7 @@ class LikeStore: ObservableObject {
             var reverted = liked
             reverted[videoId] = !target
             liked = reverted
+            Log.sync.error("toggleLike failed for videoId=\(videoId) target=\(target) error: \(error) (\(error.localizedDescription))")
         }
     }
 }

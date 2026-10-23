@@ -127,6 +127,28 @@ struct AppLogger {
 enum Log {
     private static let subsystem = Bundle.main.bundleIdentifier ?? "com.686udjie.Trop"
 
+    static func wireSwiftyTube() {
+        guard SwiftyTubeLog.handler == nil else { return }
+        let logger = Logger(
+            subsystem: subsystem,
+            category: "SwiftyTube"
+        )
+        SwiftyTubeLog.handler = { message, level in
+            switch level {
+            case .debug:
+                logger.debug("\(message, privacy: .private)")
+            case .info:
+                logger.info("\(message, privacy: .private)")
+            case .notice:
+                logger.notice("\(message, privacy: .public)")
+                FileLog.shared.append("SwiftyTube", "NOTICE", message)
+            case .error:
+                logger.error("\(message, privacy: .public)")
+                FileLog.shared.append("SwiftyTube", "ERROR", message)
+            }
+        }
+    }
+
     static let player = AppLogger(logger: Logger(subsystem: subsystem, category: "Player"), category: "player", redact: false)
     static let mpv = AppLogger(logger: Logger(subsystem: subsystem, category: "mpv"), category: "mpv", writesToDisk: false, redact: false)
     static let nowPlaying = AppLogger(logger: Logger(subsystem: subsystem, category: "NowPlaying"), category: "nowPlaying")

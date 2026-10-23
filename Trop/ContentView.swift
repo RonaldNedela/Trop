@@ -29,11 +29,11 @@ struct ContentView: View {
                 ExploreView()
             }
 
-            Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search) {
+            Tab("Search", systemImage: "magnifyingglass", value: 3) {
                 SearchView()
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
+        .tabBarMinimizeBehavior(.never)
             .tabViewBottomAccessory(isEnabled: nowPlaying.isBarPresented) {
                 MiniPlayerBarView(onExpand: {
                     // Dismiss the keyboard before expanding the player so the reveal is visible on the first tap.

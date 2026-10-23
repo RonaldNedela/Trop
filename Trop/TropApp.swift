@@ -15,6 +15,7 @@ struct TropApp: App {
     init() {
         configureNuke()
         ensureDirectories()
+        Log.wireSwiftyTube()
         PlayerController.registerRemoteControlSupport()
         observePlaybackSettings()
         Task { await InnerTubeClient.tropShared.syncTropLocale() }

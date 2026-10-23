@@ -26,7 +26,7 @@ struct LibraryView: View {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    @State private var accountState = AccountSheetState()
+    private let accountState = AccountSheetState.shared
 
     private var gridColumns: [GridItem] {
         let count = horizontalSizeClass == .regular ? 3 : 2
@@ -62,7 +62,7 @@ struct LibraryView: View {
                     accountIsLoggedIn: accountState.isLoggedIn,
                     accountImageUrl: accountState.accountImageUrl,
                     onHistory: { router.libraryPath.append(DetailRoute.history) },
-                    onAccount: { accountState.isAccountSheetPresented = true }
+                    onAccount: { router.libraryPath.append(DetailRoute.settings) }
                 )
 
                 Group {
@@ -99,9 +99,6 @@ struct LibraryView: View {
                 }
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showCreateDialog)
-            .accountSheets(state: accountState) {
-                router.libraryPath.append(DetailRoute.settings)
-            }
             .task {
                 await loadContent()
                 accountState.restoreSession()

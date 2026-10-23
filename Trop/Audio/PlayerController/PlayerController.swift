@@ -421,7 +421,7 @@ extension PlayerController {
                 break
             }
         }
-        _mpv = nil
+        mpvAccessQueue.sync { self._mpv = nil }
         mpv_destroy(mpv)
     }
 

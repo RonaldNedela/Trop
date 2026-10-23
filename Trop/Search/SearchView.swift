@@ -24,7 +24,6 @@ struct SearchView: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
             .toolbar(.hidden, for: .navigationBar)
-            .toolbar(fieldFocused ? .hidden : .visible, for: .tabBar)
             .detailRouteDestinations()
             .onChange(of: pendingRoute) { _, route in
                 if let route {

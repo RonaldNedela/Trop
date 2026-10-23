@@ -6,6 +6,7 @@
 //
 
 @preconcurrency import SwiftUI
+import SwiftyTube
 import WebKit
 
 // Presented as a sheet — launches Google OAuth in a full-screen WKWebView
@@ -59,6 +60,7 @@ final class WebLoginController: UIViewController {
 
         let config = WKWebViewConfiguration()
         let webView = WKWebView(frame: .zero, configuration: config)
+        webView.customUserAgent = LoginWebviewHarvest.userAgent
         webView.navigationDelegate = delegate
         view = webView
 
@@ -70,6 +72,7 @@ final class WebLoginController: UIViewController {
 // Handles navigation and extracts auth cookies on login redirect
 private final class LoginNavigationDelegate: NSObject, WKNavigationDelegate {
     let model: LoginViewModel
+    private var didCaptureSession = false
 
     init(model: LoginViewModel) {
         self.model = model
@@ -79,51 +82,61 @@ private final class LoginNavigationDelegate: NSObject, WKNavigationDelegate {
         guard let url = webView.url, url.host?.contains("music.youtube.com") == true else {
             return
         }
+        guard !didCaptureSession, !model.isLoggedIn else { return }
 
-        Log.login.debug("Redirected to \(url.host ?? "") — extracting cookies...")
+        Log.login.debug("Redirected to \(url.host ?? "") — collecting cookies...")
 
-        webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
-            var cookieDict: [String: String] = [:]
-            var sapisid: String?
-            var visitorData: String?
-
-            Log.login.debug("Found \(cookies.count) total cookies")
-
-            for cookie in cookies where cookie.domain.contains("youtube.com") || cookie.domain.contains("google.com") {
-                cookieDict[cookie.name] = cookie.value
-                Log.login.debug("  Cookie: \(cookie.name) = \(cookie.value.prefix(20))... (domain: \(cookie.domain))")
-
-                if cookie.name == "__Secure-3PSAPISID" || cookie.name == "SAPISID" {
-                    sapisid = cookie.value
-                    Log.login.debug("  ✅ Found SAPISID!")
-                }
-
-                if cookie.name == "visitor_data" {
-                    visitorData = cookie.value
-                    Log.login.debug("  ✅ Found visitor_data!")
-                }
+        let dismissPromo = """
+        (function() {
+          var style = document.createElement('style');
+          style.textContent = 'ytmusic-app-promo-renderer,#smart-banner,.smart-banner,\\
+            [aria-label*="YouTube Music app"],tp-yt-paper-dialog[aria-label*="app"]{display:none!important}';
+          document.head.appendChild(style);
+          var dismiss = function() {
+            var clickable = document.querySelectorAll('button,tp-yt-paper-button,yt-button-shape button,button[role="button"]');
+            for (var i = 0; i < clickable.length; i++) {
+              var t = (clickable[i].textContent || '').trim().toLowerCase();
+              if (t === 'not now' || t === 'skip') { clickable[i].click(); break; }
             }
+          };
+          dismiss();
+          setTimeout(dismiss, 1200);
+        })();
+        """
+        webView.evaluateJavaScript(dismissPromo, completionHandler: nil)
 
-            if sapisid == nil {
-                Log.login.notice("  ❌ No SAPISID found — login may have failed")
+        startHarvest(webView: webView)
+    }
+
+    private func startHarvest(webView: WKWebView) {
+        Task { @MainActor [weak self, weak webView] in
+            guard let webView else { return }
+            let session = await LoginWebviewHarvest.collectSession(from: webView) { [weak self] in
+                guard let self, !self.didCaptureSession, !self.model.isLoggedIn else { return false }
+                return true
             }
+            guard let self, let (harvested, sapisid) = session else { return }
+            self.importSession(harvested: harvested, sapisid: sapisid, webView: webView)
+        }
+    }
+    private func importSession(harvested: [String: String], sapisid: String, webView: WKWebView) {
+        didCaptureSession = true
+        model.handleLogin(
+            cookies: harvested,
+            sapisid: sapisid,
+            visitorData: harvested["visitor_data"],
+            dataSyncId: model.dataSyncId
+        )
 
-            self?.model.cookies = cookieDict
-            self?.model.sapisid = sapisid
-            self?.model.visitorData = visitorData
-            self?.model.isLoggedIn = sapisid != nil
-            self?.model.isPresented = false
-
-            // Extract dataSyncId from the YouTube page config via JS injection
-            webView.evaluateJavaScript("window.yt?.config_?.DATASYNC_ID ?? ''") { result, error in
-                if let dataSyncId = result as? String, !dataSyncId.isEmpty {
-                    self?.model.dataSyncId = dataSyncId
-                    Log.login.debug("  ✅ Found dataSyncId: \(dataSyncId.prefix(15))...")
-                } else if let error = error {
-                    Log.login.error("  ⚠️ JS eval for dataSyncId failed: \(error.localizedDescription)")
-                } else {
-                    Log.login.notice("  ⚠️ dataSyncId not found in page context")
-                }
+        // Extract dataSyncId from the YouTube page config via JS injection
+        webView.evaluateJavaScript("window.yt?.config_?.DATASYNC_ID ?? ''") { [weak self] result, error in
+            if let dataSyncId = result as? String, !dataSyncId.isEmpty {
+                self?.model.dataSyncId = dataSyncId
+                Log.login.debug("  ✅ Found dataSyncId: \(dataSyncId.prefix(15))...")
+            } else if let error {
+                Log.login.error("  ⚠️ JS eval for dataSyncId failed: \(error.localizedDescription)")
+            } else {
+                Log.login.debug("  ⚠️ dataSyncId not found in page context")
             }
         }
     }

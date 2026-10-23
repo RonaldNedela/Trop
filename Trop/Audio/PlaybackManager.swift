@@ -158,6 +158,8 @@ actor PlaybackManager {
                 audioURL: audioURL,
                 duration: duration
             )
+        case .hls(let url):
+            return url
         }
     }
 
@@ -181,6 +183,8 @@ actor PlaybackManager {
             return url
         case .split(let videoURL, _, _):
             return videoURL
+        case .hls(let url):
+            return url
         }
     }
 

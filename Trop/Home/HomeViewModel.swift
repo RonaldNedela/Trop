@@ -19,11 +19,6 @@ final class HomeViewModel {
     var error: Error?
 
     var isLoggedIn = false
-    var accountName = "Guest"
-    var accountImageUrl: String?
-
-    var isLoginSheetPresented = false
-    var isAccountSheetPresented = false
 
     var hideExplicit = false {
         didSet { mergeSections() }
@@ -120,48 +115,21 @@ final class HomeViewModel {
 
     func restoreSession() async {
         let loggedIn = await cookieStore.isLoggedIn()
+        isLoggedIn = loggedIn
         guard loggedIn else { return }
-        isLoggedIn = true
         await InnerTubeClient.tropShared.loadState(from: cookieStore)
-        await fetchAccountInfo()
     }
 
-    func handleLogin(cookies: [String: String], sapisid: String?, visitorData: String?) {
-        isLoggedIn = sapisid != nil
-        isLoginSheetPresented = false
-        Task {
-            await cookieStore.save(cookies: cookies, sapisid: sapisid, visitorData: visitorData)
-            await InnerTubeClient.tropShared.loadState(from: cookieStore)
-            if isLoggedIn {
-                await fetchAccountInfo()
+    func handleSessionChange(loggedIn: Bool) {
+        isLoggedIn = loggedIn
+        if loggedIn {
+            Task {
+                await InnerTubeClient.tropShared.loadState(from: cookieStore)
                 await loadPhase2Sections()
             }
-        }
-    }
-
-    func logout() {
-        Task {
-            await cookieStore.clear()
-            isLoggedIn = false
-            accountName = "Guest"
-            accountImageUrl = nil
-            isAccountSheetPresented = false
+        } else {
             cachedPhase2Sections = []
             mergeSections()
-        }
-    }
-
-    func tapAccount() {
-        isAccountSheetPresented = true
-    }
-
-    private func fetchAccountInfo() async {
-        do {
-            let info = try await InnerTubeClient.tropShared.accountInfo()
-            accountName = info.name
-            accountImageUrl = info.thumbnailUrl
-        } catch {
-            Log.homeViewModel.error("Failed to fetch account info: \(error)")
         }
     }
 

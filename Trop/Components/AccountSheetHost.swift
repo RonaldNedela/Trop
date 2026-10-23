@@ -7,37 +7,70 @@
 
 import SwiftUI
 
-/// Account sheet state shared by the Library and Explore tabs (the Home tab
-/// drives the same sheets through its view model instead).
+/// Shared account/session state for the app. Used by the tab headers
+/// (avatar) and the account section at the top of Settings.
 @MainActor
 @Observable
 final class AccountSheetState {
+    static let shared = AccountSheetState()
+
     var accountName = "Guest"
     var accountImageUrl: String?
     var isLoginSheetPresented = false
-    var isAccountSheetPresented = false
     let loginModel = LoginViewModel()
+
+    private let cookieStore = CookieStore()
+    private var hasAttemptedTokenRefresh = false
 
     var isLoggedIn: Bool { loginModel.isLoggedIn }
 
+    private init() {}
+
     func restoreSession() {
+        hasAttemptedTokenRefresh = false
         loginModel.restoreSessionIfPresent()
     }
 
     func fetchAccountInfo() async {
         guard loginModel.isLoggedIn else { return }
-        do {
-            let info = try await InnerTubeClient.tropShared.accountInfo()
+        for attempt in 1...3 {
+            let info: AccountInfo
+            do {
+                info = try await InnerTubeClient.tropShared.accountInfo()
+            } catch {
+                Log.loginViewModel.error("fetchAccountInfo: attempt \(attempt) failed: \(error)")
+                return
+            }
+            let knownName = !info.name.isEmpty && info.name != "Guest"
+            guard knownName else {
+                if attempt < 3 {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    continue
+                }
+                Log.loginViewModel.notice("fetchAccountInfo: giving up — menu stayed guest-shaped")
+                if !hasAttemptedTokenRefresh {
+                    hasAttemptedTokenRefresh = true
+                    await refreshRotatedSession()
+                }
+                return
+            }
             accountName = info.name
-            accountImageUrl = info.thumbnailUrl
-        } catch {
-            Log.loginViewModel.error("Failed to fetch account info: \(error)")
+            if let url = info.thumbnailUrl {
+                accountImageUrl = url
+                return
+            }
+            if accountImageUrl != nil || attempt == 3 {
+                Log.loginViewModel.debug("fetchAccountInfo: name OK, no photo in response")
+                return
+            }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
         }
     }
 
     func handleLoginChange(_ loggedIn: Bool) {
         if loggedIn {
             isLoginSheetPresented = false
+            hasAttemptedTokenRefresh = false
             Task { await fetchAccountInfo() }
         }
     }
@@ -46,15 +79,29 @@ final class AccountSheetState {
         loginModel.logout()
         accountName = "Guest"
         accountImageUrl = nil
-        isAccountSheetPresented = false
+        hasAttemptedTokenRefresh = false
+    }
+    func refreshRotatedSession() async {
+        let base = await cookieStore.cookies()
+        let sapisid = await cookieStore.sapisid()
+        guard sapisid != nil else { return }
+        let refreshed = await SessionTokenRefresher.shared.refreshRotatedTokens(baseCookies: base)
+        guard !refreshed.isEmpty else { return }
+        await cookieStore.save(
+            cookies: refreshed,
+            sapisid: sapisid,
+            visitorData: refreshed["visitor_data"],
+            dataSyncId: await cookieStore.dataSyncId()
+        )
+        Log.loginViewModel.notice("refreshRotatedSession: reissued cookies persisted — reloading state")
+        await InnerTubeClient.tropShared.loadState(from: cookieStore)
+        await fetchAccountInfo()
     }
 }
 
-/// Attaches the login + account sheets and their wiring. `onSettings` pushes
-/// the settings route on the caller's tab path.
-struct AccountSheetHost: ViewModifier {
+struct LoginSheetHost: ViewModifier {
     @Bindable var state: AccountSheetState
-    var onSettings: () -> Void
+    @ObservedObject private var loginModel = AccountSheetState.shared.loginModel
 
     func body(content: Content) -> some View {
         content
@@ -69,33 +116,17 @@ struct AccountSheetHost: ViewModifier {
                         }
                 }
             }
-            .sheet(isPresented: $state.isAccountSheetPresented) {
-                AccountSheetView(
-                    isLoggedIn: state.isLoggedIn,
-                    titleText: state.accountName,
-                    accountImageUrl: state.accountImageUrl,
-                    onDone: { state.isAccountSheetPresented = false },
-                    onLogin: {
-                        state.isAccountSheetPresented = false
-                        DispatchQueue.main.async {
-                            state.isLoginSheetPresented = true
-                        }
-                    },
-                    onSettings: {
-                        state.isAccountSheetPresented = false
-                        onSettings()
-                    },
-                    onSignOut: { state.signOut() }
-                )
-            }
-            .onChange(of: state.loginModel.isLoggedIn) { _, loggedIn in
-                state.handleLoginChange(loggedIn)
+            .onChange(of: loginModel.isLoggedIn) { _, loggedIn in
+                if loggedIn {
+                    state.isLoginSheetPresented = false
+                    Task { await state.fetchAccountInfo() }
+                }
             }
     }
 }
 
 extension View {
-    func accountSheets(state: AccountSheetState, onSettings: @escaping () -> Void) -> some View {
-        modifier(AccountSheetHost(state: state, onSettings: onSettings))
+    func loginSheet(state: AccountSheetState) -> some View {
+        modifier(LoginSheetHost(state: state))
     }
 }
