@@ -11,6 +11,7 @@ A free and open source YouTube Music client for iOS.
 ## Features
 
 - No ads
+- SponsorBlock: skips sponsor reads, intros, outros and non-music sections (silence, talking)
 - Stream songs and videos from YouTube Music
 - Synced lyrics (Musixmatch, Netease, Kugou, LRCLIB, Genius)
 - Library sync (playlists, albums, artists, podcasts)
@@ -25,7 +26,7 @@ Requires iOS 26 or later and a YouTube Music account (sign in through the in-app
 
 ### Feather / AltStore / SideStore
 
-Add the Trop source, then install the nightly IPA (unsigned — your client re-signs it with your Apple ID):
+Add the Trop source, then install the nightly IPA (unsigned - your client re-signs it with your Apple ID):
 
 ```
 https://raw.githubusercontent.com/686udjie/Trop/main/altstore.json
@@ -42,9 +43,9 @@ The latest stable IPA is on the [releases page](../../releases). Nightly IPAs ar
 
 ## Notable mentions
 
-- [InnerTubeX](https://github.com/MetrolistGroup/innertubex) — eXtended InnerTube API library for Kotlin
-- [zemer-cipher](https://github.com/ZemerTeam/zemer-cipher) — YouTube cipher deobfuscation and PoToken generation
-- [Metrolist](https://github.com/MetrolistGroup/Metrolist) — YouTube Music client for Android
+- [InnerTubeX](https://github.com/MetrolistGroup/innertubex) - eXtended InnerTube API library for Kotlin
+- [zemer-cipher](https://github.com/ZemerTeam/zemer-cipher) - YouTube cipher deobfuscation and PoToken generation
+- [Metrolist](https://github.com/MetrolistGroup/Metrolist) - YouTube Music client for Android
 
 ## Community
 

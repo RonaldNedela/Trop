@@ -42,7 +42,7 @@ struct ExploreView: View {
             }
             .onAppear { viewModel.load() }
             .task {
-                accountState.restoreSession()
+                await accountState.restoreSession()
                 await accountState.fetchAccountInfo()
             }
             .task(id: viewModel.sections.count) {

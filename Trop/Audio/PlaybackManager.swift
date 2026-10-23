@@ -22,6 +22,7 @@ actor PlaybackManager {
     /// Resolve a video and start playback. Returns the result used, or throws.
     @discardableResult
     func resolveAndPlay(videoId: String) async throws -> PlaybackResult {
+        await MainActor.run { SponsorBlockIntegration.shared.warm(for: videoId) }
         if let localPath = await DownloadManager.shared.localURL(for: videoId) {
             let song = await MainActor.run { NowPlaying.shared.queueSongs.first { $0.videoId == videoId } }
             let artists = song?.artists ?? []

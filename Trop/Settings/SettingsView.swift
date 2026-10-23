@@ -66,7 +66,7 @@ struct SettingsView: View {
         .miniPlayerTracksScroll()
         .loginSheet(state: accountState)
         .task {
-            accountState.restoreSession()
+            await accountState.restoreSession()
             await accountState.fetchAccountInfo()
         }
     }

@@ -18,6 +18,9 @@ struct IntegrationsSettingsView: View {
                 SettingsNavigationRow("Canvas", icon: "film") {
                     CanvasSettingsView()
                 }
+                SettingsNavigationRow("SponsorBlock", icon: "forward.end") {
+                    SponsorBlockSettingsView()
+                }
             } footer: {
                 Text("Connect external services to enhance your experience.")
             }

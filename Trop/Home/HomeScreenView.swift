@@ -51,7 +51,7 @@ struct HomeScreenView: View {
             }
             .task {
                 await viewModel.restoreSession()
-                accountState.restoreSession()
+                await accountState.restoreSession()
                 await accountState.fetchAccountInfo()
                 viewModel.loadHomeData()
                 await reloadSpeedDial()

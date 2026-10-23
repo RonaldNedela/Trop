@@ -49,7 +49,6 @@ final class NowPlaying {
     var musicVideoType: String?
 
     private var originalQueue: [SongItem]?
-    private var originalIndex: Int = 0
 
     var hasNext: Bool {
         queueIndex + 1 < queueSongs.count
@@ -157,7 +156,6 @@ final class NowPlaying {
         }
         if originalQueue == nil {
             originalQueue = queueSongs
-            originalIndex = queueIndex
         }
         let prefix = queueIndex > 0 ? Array(queueSongs[0..<queueIndex]) : []
         let current = queueSongs[queueIndex]
@@ -250,7 +248,7 @@ final class NowPlaying {
         self.isPlaying = true
         self.title = title
         self.artists = artists
-        self.artist = cleanArtist(artist ?? "")
+        self.artist = cleanArtistDisplay(artist ?? "")
         self.albumTitle = album ?? ""
         self.currentTime = 0
         self.duration = 0
@@ -537,6 +535,7 @@ final class NowPlaying {
     private func preloadNextTrack() {
         guard hasNext else { return }
         let nextId = queueSongs[queueIndex + 1].videoId
+        SponsorBlockIntegration.shared.warm(for: nextId)
         loggedTask(Log.nowPlaying, "Pre-resolve failed") {
             _ = try await PlaybackManager.shared.resolve(videoId: nextId)
             Log.nowPlaying.debug("Pre-resolved next track: \(nextId)")
@@ -561,6 +560,7 @@ final class NowPlaying {
         currentTime = PlayerController.shared.currentTime
         duration = PlayerController.shared.duration
         PlayerController.shared.updateNowPlayingProgress()
+        SponsorBlockIntegration.shared.tick()
         if let videoId, duration >= 600 || musicVideoType == "MUSIC_VIDEO_TYPE_PODCAST_EPISODE" {
             let vid = videoId
             let pos = currentTime
@@ -583,10 +583,6 @@ final class NowPlaying {
             return
         }
         self.dominantColors = uiImage.extractDominantColors()
-    }
-
-    private func cleanArtist(_ name: String) -> String {
-        cleanArtistDisplay(name)
     }
 }
 

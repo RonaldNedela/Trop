@@ -53,9 +53,9 @@ import Combine
             }
         }
 
-        func restoreSessionIfPresent() {
+        func restoreSessionIfPresent() async {
             loadTask?.cancel()
-            loadTask = Task { [weak self] in
+            let task = Task { [weak self] in
                 guard let self else { return }
                 let loggedIn = await self.cookieStore.isLoggedIn()
                 guard loggedIn else { return }
@@ -66,6 +66,8 @@ import Combine
                 self.dataSyncId = await self.cookieStore.dataSyncId()
                 self.isLoggedIn = true
             }
+            loadTask = task
+            await task.value
         }
 
         private func cookieString(from dict: [String: String]) -> String {

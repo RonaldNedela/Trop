@@ -21,18 +21,21 @@ final class AccountSheetState {
 
     private let cookieStore = CookieStore()
     private var hasAttemptedTokenRefresh = false
+    private var isFetchingAccountInfo = false
 
     var isLoggedIn: Bool { loginModel.isLoggedIn }
 
     private init() {}
 
-    func restoreSession() {
+    func restoreSession() async {
         hasAttemptedTokenRefresh = false
-        loginModel.restoreSessionIfPresent()
+        await loginModel.restoreSessionIfPresent()
     }
 
     func fetchAccountInfo() async {
-        guard loginModel.isLoggedIn else { return }
+        guard loginModel.isLoggedIn, !isFetchingAccountInfo else { return }
+        isFetchingAccountInfo = true
+        defer { isFetchingAccountInfo = false }
         for attempt in 1...3 {
             let info: AccountInfo
             do {
@@ -50,6 +53,9 @@ final class AccountSheetState {
                 Log.loginViewModel.notice("fetchAccountInfo: giving up — menu stayed guest-shaped")
                 if !hasAttemptedTokenRefresh {
                     hasAttemptedTokenRefresh = true
+                    // Release the in-flight guard so refreshRotatedSession's
+                    // own accountInfo fetch can run after the cookie reissue.
+                    isFetchingAccountInfo = false
                     await refreshRotatedSession()
                 }
                 return

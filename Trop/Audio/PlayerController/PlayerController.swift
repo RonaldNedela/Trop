@@ -81,6 +81,7 @@ final class PlayerController {
     let playState = CurrentValueSubject<State, Never>(.stopped)
     var pendingResumeAt: TimeInterval = 0
     var nowPlayingInfo = [String: Any]()
+    private var pendingSeek: (target: TimeInterval, deadline: Date)?
 
     var currentTime: TimeInterval {
         withMpv { mpv in
@@ -173,12 +174,14 @@ extension PlayerController {
             NowPlaying.shared.update(title: title, artist: artist, videoId: videoId, artists: artists, thumbnailUrl: thumbnailUrl)
         }
 
+        let skipStart = await SponsorBlockIntegration.shared.preloadedStartOffset(for: videoId)
+        guard NowPlaying.shared.videoId == videoId else {
+            return
+        }
+
         let prevVideoId = currentVideoId
         let isNewSong = prevVideoId != nil && videoId != prevVideoId
 
-        if isNewSong {
-            await PlaybackStateService.shared.stopTracking()
-        }
         desiredPlaying = true
         assertAudioSession()
         loadedMuxedURL = nil
@@ -187,13 +190,12 @@ extension PlayerController {
         muxedActive = false
         muxedVideoId = nil
         pendingResumeAt = 0
+        pendingSeek = nil
         videoModeSwitchInFlight = false
         videoFlipAwaitingRestart = false
         NowPlaying.shared.isVideoMode = false
         NowPlaying.shared.isVideoReady = false
         if hasPresentedVideo { clearVideoLayer() }
-        if let videoId { await PlaybackStateService.shared.startTracking(videoId: videoId) }
-
         let isReady = withMpv { _ in true } ?? false
         guard isReady else {
             Log.player.info("mpv not ready yet, parking URL for deferred load")
@@ -206,18 +208,27 @@ extension PlayerController {
         setVideoCrop(.none)
 
         pendingVideoId = videoId
+        let loadStart = skipStart > 0 ? Int(skipStart.rounded(.up)) : 0
+        let loadArguments = loadStart > 0
+            ? ["loadfile", url.absoluteString, "replace", "-1", "start=\(loadStart)"]
+            : ["loadfile", url.absoluteString, "replace"]
         Log.player.info(
-            "TRANSITION play videoId=\(videoId ?? "nil") isNewSong=\(isNewSong) muxedActive=\(muxedActive) url=\(url.absoluteString.prefix(80))"
+            "TRANSITION play videoId=\(videoId ?? "nil") isNewSong=\(isNewSong) muxedActive=\(muxedActive) "
+                + "url=\(url.absoluteString.prefix(80))"
         )
-        let absoluteString = url.absoluteString
-        let loadArguments = ["loadfile", absoluteString, "replace"]
         let cmdResult = withMpv { mpv -> Int32 in
             mpv_set_property_string(mpv, "pause", "no")
             return loadArguments.withUnsafeCArg { mpv_command(mpv, $0) }
         } ?? -1
         if cmdResult != 0 {
             Log.player.error("mpv_command loadfile failed result=\(cmdResult)")
+            pendingVideoId = nil
+            return
         }
+        if isNewSong {
+            await PlaybackStateService.shared.stopTracking()
+        }
+        if let videoId { await PlaybackStateService.shared.startTracking(videoId: videoId) }
         playState.send(.playing)
         NowPlaying.shared.isPlaying = true
         NowPlaying.shared.currentTime = 0
@@ -226,6 +237,8 @@ extension PlayerController {
     }
 
     func seek(to time: TimeInterval) {
+        pendingSeek = (time, Date().addingTimeInterval(1.5))
+        NowPlaying.shared.currentTime = time
         withMpv { mpv in
             var val = time
             let result = mpv_set_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, &val)
@@ -451,8 +464,6 @@ extension PlayerController {
             mpv_get_property(mpv, "pause", MPV_FORMAT_FLAG, &pauseFlag)
         }
         let actuallyPlaying = pauseFlag == 0
-        let aoPtr = mpv_get_property_string(mpv, "current-ao")
-        if let aoPtr { mpv_free(aoPtr) }
         let pendingVideoId = self.pendingVideoId
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -739,15 +750,6 @@ extension PlayerController {
                     return
                 }
             }
-            guard NowPlaying.shared.videoId == videoId else { return }
-            if voWarmedVideoId != videoId {
-                setVideoTrack()
-                voWarmedVideoId = videoId
-                Log.player.debug("TRANSITION video preloaded videoId=\(videoId)")
-            }
-            guard !ProcessInfo.processInfo.isLowPowerModeEnabled else { return }
-            guard NowPlaying.shared.videoId == videoId else { return }
-            _ = await ensureVideoAttached(videoId: videoId)
         }
     }
 
@@ -939,10 +941,10 @@ extension PlayerController {
                 }
             }
         case .ended:
-            Log.player.info("AUDIO_INTERRUPTION ended")
             let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
             let shouldResume = options.contains(.shouldResume) || wasPlayingBeforeInterruption
+            Log.player.info("AUDIO_INTERRUPTION ended")
             Task { @MainActor in
                 guard shouldResume else { return }
                 self.assertAudioSession()
@@ -1049,8 +1051,16 @@ extension PlayerController {
             mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, &pos)
             return (dur, pos)
         }
-        guard let props, props.dur > 0 else { return }
+        guard var props, props.dur > 0 else { return }
         let np = NowPlaying.shared
+
+        if let seek = pendingSeek {
+            if abs(props.pos - seek.target) > 1, Date() < seek.deadline {
+                props.pos = seek.target
+            } else {
+                pendingSeek = nil
+            }
+        }
 
         var info = nowPlayingInfo
         info[MPMediaItemPropertyPlaybackDuration] = props.dur
