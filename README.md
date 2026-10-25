@@ -2,10 +2,11 @@
 
 A free and open source YouTube Music client for iOS.
 
-<p>
-	<img src=".github/assets/1.png" width="25%" alt="Homepage" />
-	<img src=".github/assets/2.png" width="25%" alt="Player" />
-	<img src=".github/assets/3.png" width="25%" alt="Queue" />
+<p align="center">
+	<img src=".github/assets/ios15_home.png" width="23%" alt="Home Screen (iPhone 7, iOS 15.8.8)" />
+	<img src=".github/assets/ios15_explore.png" width="23%" alt="Explore Screen (iPhone 7, iOS 15.8.8)" />
+	<img src=".github/assets/ios15_playlist.png" width="23%" alt="Playlist View (iPhone 7, iOS 15.8.8)" />
+	<img src=".github/assets/ios15_player.png" width="23%" alt="Now Playing Player (iPhone 7, iOS 15.8.8)" />
 </p>
 
 ## Features
@@ -25,6 +26,12 @@ A free and open source YouTube Music client for iOS.
 ## Installation
 
 Requires iOS 15.0 or later (verified on iOS 15.8.8 / iPhone 7) and a YouTube Music account. Supports TrollStore, SideStore, AltStore, and Feather.
+
+### TrollStore (Recommended for iOS 15.0 - 15.8.8)
+
+1. Download the pre-built unsigned IPA from the [Releases page](https://github.com/RonaldNedela/Trop/releases/latest) or direct link:
+   - 📦 **[Trop.ipa (v0.0.4-ios15)](https://github.com/RonaldNedela/Trop/releases/download/v0.0.4-ios15/Trop.ipa)**
+2. Open with **TrollStore** to install permanently without revokes or 7-day limits.
 
 ### Feather / AltStore / SideStore
 
