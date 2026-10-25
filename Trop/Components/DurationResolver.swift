@@ -5,14 +5,13 @@
 //  Created by 686udjie on 2/07/2026.
 //
 
+import Combine
 import Foundation
-import Observation
 
 /// Resolves unknown track durations via the shared `InnerTubeClient`,
 /// shared by every song row and grid cell.
-@Observable
-final class DurationResolver {
-    var resolved = 0
+final class DurationResolver: ObservableObject {
+    @Published var resolved = 0
 
     func effectiveDuration(known: Int) -> Int {
         known > 0 ? known : resolved

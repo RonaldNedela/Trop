@@ -5,6 +5,7 @@
 //  Created by 686udjie on 16/07/2026.
 //
 
+import Combine
 import Foundation
 
 struct LyricLine: Identifiable, Equatable, Sendable {
@@ -16,14 +17,13 @@ struct LyricLine: Identifiable, Equatable, Sendable {
 }
 
 @MainActor
-@Observable
-final class LyricsState {
+final class LyricsState: ObservableObject {
     static let shared = LyricsState()
 
     /// Songs with confirmed lyrics. Populated by preload/fetch.
-    var availableVideoIds: Set<String> = []
-    var providerName: String?
-    var refreshToken: Int = 0
+    @Published var availableVideoIds: Set<String> = []
+    @Published var providerName: String?
+    @Published var refreshToken: Int = 0
 
     private init() {}
 }

@@ -184,12 +184,16 @@ struct LibraryView: View {
         librarySection(title: "Playlists", count: playlists.count) {
             ForEach(autoPlaylists) { info in
                 if let detailRoute = info.detailRoute {
-                    NavigationLink(value: detailRoute) {
+                    Button {
+                        router.libraryPath.append(detailRoute)
+                    } label: {
                         autoPlaylistCell(info: info)
                     }
                     .buttonStyle(.plain)
                 } else if let route = info.route {
-                    NavigationLink(value: DetailRoute.autoPlaylist(route)) {
+                    Button {
+                        router.libraryPath.append(DetailRoute.autoPlaylist(route))
+                    } label: {
                         autoPlaylistCell(info: info)
                     }
                     .buttonStyle(.plain)
@@ -197,7 +201,9 @@ struct LibraryView: View {
             }
 
             ForEach(playlists, id: \.id) { playlist in
-                NavigationLink(value: DetailRoute.playlist(playlistId: playlist.id)) {
+                Button {
+                    router.libraryPath.append(DetailRoute.playlist(playlistId: playlist.id))
+                } label: {
                     itemCell(
                         url: playlist.thumbnailUrl,
                         title: playlist.name,
@@ -223,7 +229,9 @@ struct LibraryView: View {
     private var artistsSection: some View {
         librarySection(title: "Artists", count: artists.count) {
             ForEach(artists, id: \.id) { artist in
-                NavigationLink(value: DetailRoute.artist(browseId: artist.id)) {
+                Button {
+                    router.libraryPath.append(DetailRoute.artist(browseId: artist.id))
+                } label: {
                     artistCell(
                         url: artist.thumbnailUrl,
                         name: artist.name
@@ -239,7 +247,9 @@ struct LibraryView: View {
     private var albumsSection: some View {
         librarySection(title: "Albums", count: albums.count) {
             ForEach(albums, id: \.id) { album in
-                NavigationLink(value: DetailRoute.album(browseId: album.id)) {
+                Button {
+                    router.libraryPath.append(DetailRoute.album(browseId: album.id))
+                } label: {
                     itemCell(
                         url: album.thumbnailUrl,
                         title: album.title,
@@ -256,7 +266,9 @@ struct LibraryView: View {
     private var podcastsSection: some View {
         librarySection(title: "Podcasts", count: podcasts.count) {
             ForEach(podcasts, id: \.id) { podcast in
-                NavigationLink(value: DetailRoute.podcast(browseId: podcast.id)) {
+                Button {
+                    router.libraryPath.append(DetailRoute.podcast(browseId: podcast.id))
+                } label: {
                     itemCell(
                         url: podcast.thumbnailUrl,
                         title: podcast.name,

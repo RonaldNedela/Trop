@@ -5,6 +5,7 @@
 //  Created by 686udjie on 13/07/2026.
 //
 
+import Combine
 import Foundation
 
 enum HistorySource: String, CaseIterable, Sendable {
@@ -13,14 +14,13 @@ enum HistorySource: String, CaseIterable, Sendable {
 }
 
 @MainActor
-@Observable
-final class HistoryView {
-    var groupedEntries: [(title: String, entries: [DatabaseService.HistoryEntry])] = []
-    var remoteSections: [(title: String, songs: [SongItem])] = []
-    var source: HistorySource = .local
-    var isLoading = true
-    var isRemoteLoading = false
-    var remoteError: Error?
+final class HistoryView: ObservableObject {
+    @Published var groupedEntries: [(title: String, entries: [DatabaseService.HistoryEntry])] = []
+    @Published var remoteSections: [(title: String, songs: [SongItem])] = []
+    @Published var source: HistorySource = .local
+    @Published var isLoading = true
+    @Published var isRemoteLoading = false
+    @Published var remoteError: Error?
 
     private let db = DatabaseService.shared
 

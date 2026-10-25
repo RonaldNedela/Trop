@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct HomeScreenView: View {
-    @Environment(SettingsStore.self) private var settings
+    @Environment(\.settingsStore) private var settings
     @ObservedObject private var router = AppRouter.shared
-    @State private var viewModel = HomeViewModel()
+    @StateObject private var viewModel = HomeViewModel()
     private let accountState = AccountSheetState.shared
 
     @State private var pendingRoute: DetailRoute?

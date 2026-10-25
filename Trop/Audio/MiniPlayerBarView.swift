@@ -17,11 +17,11 @@ import Nuke
 struct MiniPlayerBarView: View {
     let onExpand: () -> Void
 
-    @Environment(MiniPlayerScrollState.self) private var scrollState
+    @Environment(\.miniPlayerScrollState) private var scrollState
     @Environment(\.colorScheme) private var colorScheme
 
     private let player = PlayerController.shared
-    @Bindable private var np = NowPlaying.shared
+    @ObservedObject private var np = NowPlaying.shared
 
     @State private var dragOffset: CGFloat = 0
     @State private var dragAxis: DragAxis?
@@ -174,7 +174,6 @@ struct MiniPlayerBarView: View {
     private var playPauseButton: some View {
                 Button(action: { player.togglePlayPause() }, label: {
             Image(systemName: np.isPlaying ? "pause.fill" : "play.fill")
-                .contentTransition(.symbolEffect(.replace))
                 .font(.system(size: 17))
                 .foregroundStyle(.tint)
         })

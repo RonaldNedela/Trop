@@ -8,13 +8,11 @@
 import SwiftUI
 
 struct ContentSettingsView: View {
-    @Environment(\.settingsStore) private var settings
+    @ObservedObject private var settings = SettingsStore.shared
 
     private static let countries = ["US", "GB", "CA", "AU", "FR", "DE", "ES", "IT", "PT", "JP", "KR", "MX", "BR", "IN"]
 
     var body: some View {
-        @Bindable var settings = settings
-
         List {
             Section {
                 SettingsToggleRow("Hide Explicit Content", icon: "eye.slash", isOn: $settings.hideExplicit)

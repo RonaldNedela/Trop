@@ -10,7 +10,7 @@ import SwiftUI
 /// Shown from the lyrics page's ⋮ button.
 struct LyricsMenuSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.settingsStore) private var settings
+    @ObservedObject private var settings = SettingsStore.shared
     private let np = NowPlaying.shared
 
     @State private var showOffsetEditor = false
@@ -18,8 +18,6 @@ struct LyricsMenuSheet: View {
     @State private var showSearchSheet = false
 
     var body: some View {
-        @Bindable var settings = settings
-
         SheetChrome {
             Group {
                 actionGrid
@@ -198,7 +196,7 @@ struct LyricsMenuSheet: View {
         }
 
         return Text("\(sign)\(magnitude)s")
-            .foregroundStyle(.secondary)
+            .foregroundColor(.secondary)
     }
 
     private func trimmedDecimalString(_ v: Double) -> String {

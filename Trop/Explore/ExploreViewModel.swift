@@ -5,14 +5,14 @@
 // Created by 686udjie on 11/09/2026.
 //
 
+import Combine
 import Foundation
 import SwiftUI
 
 /// Drives the Explore tab (`FEmusic_explore`): new releases, charts,
 /// moods & genres.
 @MainActor
-@Observable
-final class ExploreViewModel {
+final class ExploreViewModel: ObservableObject {
 
     enum Phase {
         case idle
@@ -22,9 +22,9 @@ final class ExploreViewModel {
         case failed
     }
 
-    private(set) var phase: Phase = .idle
-    private(set) var sections: [ExploreSection] = []
-    private(set) var error: Error?
+    @Published private(set) var phase: Phase = .idle
+    @Published private(set) var sections: [ExploreSection] = []
+    @Published private(set) var error: Error?
 
     private var hasLoaded = false
 

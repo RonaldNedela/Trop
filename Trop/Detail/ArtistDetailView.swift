@@ -5,18 +5,18 @@
 //  Created by 686udjie on 03/07/2026.
 //
 
+import Combine
 import Nuke
 import SwiftUI
 
 // MARK: - View Model
 
 @MainActor
-@Observable
-final class ArtistDetailViewModel {
+final class ArtistDetailViewModel: ObservableObject {
     let browseId: String
-    var artist: ArtistDetailInfo?
-    var isLoading = true
-    var error: Error?
+    @Published var artist: ArtistDetailInfo?
+    @Published var isLoading = true
+    @Published var error: Error?
 
     private let innerTube = InnerTubeClient.tropShared
 
@@ -266,7 +266,7 @@ extension ArtistDetailViewModel {
 
 struct ArtistDetailView: View {
     let browseId: String
-    @State private var viewModel: ArtistDetailViewModel
+    @StateObject private var viewModel: ArtistDetailViewModel
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -284,7 +284,7 @@ struct ArtistDetailView: View {
 
     init(browseId: String) {
         self.browseId = browseId
-        _viewModel = State(initialValue: ArtistDetailViewModel(browseId: browseId))
+        _viewModel = StateObject(wrappedValue: ArtistDetailViewModel(browseId: browseId))
     }
 
     var body: some View {
@@ -617,7 +617,9 @@ struct ArtistDetailView: View {
         carouselSection(title: "Albums") {
             ForEach(albums.indices, id: \.self) { i in
                 let album = albums[i]
-                NavigationLink(value: DetailRoute.album(browseId: album.browseId)) {
+                Button {
+                    AppRouter.shared.open(.album(browseId: album.browseId))
+                } label: {
                     MediaGridCell(
                         thumbnailUrl: album.thumbnailUrl,
                         title: album.title,
@@ -635,7 +637,9 @@ struct ArtistDetailView: View {
         carouselSection(title: "Singles & EPs") {
             ForEach(singles.indices, id: \.self) { i in
                 let single = singles[i]
-                NavigationLink(value: DetailRoute.album(browseId: single.browseId)) {
+                Button {
+                    AppRouter.shared.open(.album(browseId: single.browseId))
+                } label: {
                     MediaGridCell(
                         thumbnailUrl: single.thumbnailUrl,
                         title: single.title,
@@ -681,7 +685,9 @@ struct ArtistDetailView: View {
         carouselSection(title: "Playlists") {
             ForEach(playlists.indices, id: \.self) { i in
                 let playlist = playlists[i]
-                NavigationLink(value: DetailRoute.playlist(playlistId: playlist.id)) {
+                Button {
+                    AppRouter.shared.open(.playlist(playlistId: playlist.id))
+                } label: {
                     MediaGridCell(
                         thumbnailUrl: playlist.thumbnailUrl,
                         title: playlist.title,
@@ -699,7 +705,9 @@ struct ArtistDetailView: View {
         carouselSection(title: "Fans Also Like", spacing: 16) {
             ForEach(artists.indices, id: \.self) { i in
                 let related = artists[i]
-                NavigationLink(value: DetailRoute.artist(browseId: related.browseId)) {
+                Button {
+                    AppRouter.shared.open(.artist(browseId: related.browseId))
+                } label: {
                     VStack(spacing: 8) {
                         AsyncImageView(url: related.thumbnailUrl)
                             .frame(width: 120, height: 120)

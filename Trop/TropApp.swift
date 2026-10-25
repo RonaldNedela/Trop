@@ -10,7 +10,7 @@ import SwiftUI
 
 @main
 struct TropApp: App {
-    @State private var settings = SettingsStore.shared
+    @StateObject private var settings = SettingsStore.shared
 
     init() {
         configureNuke()
@@ -47,7 +47,8 @@ struct TropApp: App {
             ContentView()
                 .preferredColorScheme(settings.preferredColorScheme)
                 .tint(settings.accentColor)
-                .environment(settings)
+                .environment(\.settingsStore, settings)
+                .environmentObject(settings)
                 .environment(\.downloadManager, DownloadManager.shared)
         }
     }

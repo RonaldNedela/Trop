@@ -5,22 +5,22 @@
 //  Created by 686udjie on 01/07/2026.
 //
 
+import Combine
 import Foundation
 import SwiftUI
 
 @MainActor
-@Observable
-final class HomeViewModel {
-    var homePage: HomePage?
-    var homeSections: [HomeSection] = []
-    var isLoading = true
-    var isRefreshing = false
-    var selectedChip: HomePage.Chip?
-    var error: Error?
+final class HomeViewModel: ObservableObject {
+    @Published var homePage: HomePage?
+    @Published var homeSections: [HomeSection] = []
+    @Published var isLoading = true
+    @Published var isRefreshing = false
+    @Published var selectedChip: HomePage.Chip?
+    @Published var error: Error?
 
-    var isLoggedIn = false
+    @Published var isLoggedIn = false
 
-    var hideExplicit = false {
+    @Published var hideExplicit = false {
         didSet { mergeSections() }
     }
 

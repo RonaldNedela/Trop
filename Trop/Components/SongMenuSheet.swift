@@ -21,6 +21,7 @@ struct SongMenuSheet: View {
         case similar
     }
 
+    @State private var activeDestination: Destination?
     @State private var pin = PinState()
     @State private var showPlaylistPicker = false
     @State private var showArtistPicker = false
@@ -77,7 +78,7 @@ struct SongMenuSheet: View {
                     }
                 }
                 MenuCard {
-                    NavigationLink(value: Destination.details) {
+                    Button(action: { activeDestination = .details }) {
                         MenuRowLabel(
                             icon: "info.circle",
                             title: "Details",
@@ -86,7 +87,7 @@ struct SongMenuSheet: View {
                     }
                     .buttonStyle(.plain)
                     Divider()
-                    NavigationLink(value: Destination.similar) {
+                    Button(action: { activeDestination = .similar }) {
                         MenuRowLabel(
                             icon: "dot.radiowaves.left.and.right",
                             title: "Similar to this song",
@@ -101,20 +102,30 @@ struct SongMenuSheet: View {
                         subtitle: "Style, size & explicit filter"
                     ) { showRadioOptions = true }
                 }
-            }
-            .navigationDestination(for: Destination.self) { dest in
-                switch dest {
-                case .details:
-                    SongDetailsView(song: song)
-                case .similar:
-                    SimilarSongsView(
-                        song: song,
-                        onNavigate: onNavigate,
-                        onPlaySong: { similar, songs in
-                            playSimilarAndExpand(similar, in: songs)
-                        }
-                    )
-                }
+
+                NavigationLink(
+                    tag: Destination.details,
+                    selection: $activeDestination,
+                    destination: { SongDetailsView(song: song) },
+                    label: { EmptyView() }
+                )
+                .hidden()
+
+                NavigationLink(
+                    tag: Destination.similar,
+                    selection: $activeDestination,
+                    destination: {
+                        SimilarSongsView(
+                            song: song,
+                            onNavigate: onNavigate,
+                            onPlaySong: { similar, songs in
+                                playSimilarAndExpand(similar, in: songs)
+                            }
+                        )
+                    },
+                    label: { EmptyView() }
+                )
+                .hidden()
             }
         }
         .confirmationDialog("View Artist", isPresented: $showArtistPicker, titleVisibility: .visible) {

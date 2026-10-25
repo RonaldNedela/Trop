@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ExploreView: View {
-    @State private var viewModel = ExploreViewModel()
+    @StateObject private var viewModel = ExploreViewModel()
     @ObservedObject private var router = AppRouter.shared
 
     @State private var pendingRoute: DetailRoute?
@@ -31,9 +31,6 @@ struct ExploreView: View {
             .frame(maxHeight: .infinity, alignment: .top)
             .toolbar(.hidden, for: .navigationBar)
             .detailRouteDestinations()
-            .navigationDestination(for: MoodItem.self) { mood in
-                MoodDetailView(mood: mood)
-            }
             .onChange(of: pendingRoute) { _, route in
                 if let route {
                     router.explorePath.append(route)
@@ -169,7 +166,9 @@ struct ExploreSectionsList: View {
                 spacing: 10
             ) {
                 ForEach(section.moods) { mood in
-                    NavigationLink(value: mood) {
+                    Button {
+                        pendingRoute.wrappedValue = .mood(mood)
+                    } label: {
                         Text(mood.title)
                             .font(.subheadline)
                             .fontWeight(.semibold)
@@ -204,7 +203,7 @@ struct ExploreSectionsList: View {
 // MARK: - Mood detail
 
 /// Full mood/genre category page: songs grid, playlists, videos, albums.
-private struct MoodDetailView: View {
+struct MoodDetailView: View {
     let mood: MoodItem
 
     @State private var sections: [ExploreSection]?

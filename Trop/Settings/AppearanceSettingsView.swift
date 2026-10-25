@@ -8,13 +8,11 @@
 import SwiftUI
 
 struct AppearanceSettingsView: View {
-    @Environment(SettingsStore.self) private var settings
+    @ObservedObject private var settings = SettingsStore.shared
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 14), count: 6)
 
     var body: some View {
-        @Bindable var settings = settings
-
         List {
             Section {
                 SettingsPickerRow("Theme Mode", icon: "sun.max", selection: $settings.themeMode)

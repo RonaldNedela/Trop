@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct HistoryScreenView: View {
-    @Environment(SettingsStore.self) private var settings
-    @State private var viewModel = HistoryView()
+    @Environment(\.settingsStore) private var settings
+    @StateObject private var viewModel = HistoryView()
     @State private var isSelecting = false
     @State private var selectedEvents: Set<Event> = []
 
@@ -84,38 +84,38 @@ struct HistoryScreenView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        if viewModel.source == .local && !displayableSections.isEmpty {
-            if isSelecting {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        isSelecting = false
-                        selectedEvents.removeAll()
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
+        ToolbarItem(placement: .navigationBarLeading) {
+            if viewModel.source == .local && !displayableSections.isEmpty && isSelecting {
+                Button {
+                    isSelecting = false
+                    selectedEvents.removeAll()
+                } label: {
+                    Image(systemName: "xmark")
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if selectedEvents.count == allEvents.count {
-                        Button("Deselect All") { selectedEvents.removeAll() }
-                    } else {
-                        Button("Select All") { selectedEvents = Set(allEvents) }
-                    }
-                }
-                if !selectedEvents.isEmpty {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(role: .destructive) {
-                            Task {
-                                await viewModel.deleteEvents(Array(selectedEvents))
-                                selectedEvents.removeAll()
-                                isSelecting = false
+            }
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            if viewModel.source == .local && !displayableSections.isEmpty {
+                if isSelecting {
+                    HStack(spacing: 12) {
+                        if selectedEvents.count == allEvents.count {
+                            Button("Deselect All") { selectedEvents.removeAll() }
+                        } else {
+                            Button("Select All") { selectedEvents = Set(allEvents) }
+                        }
+                        if !selectedEvents.isEmpty {
+                            Button(role: .destructive) {
+                                Task {
+                                    await viewModel.deleteEvents(Array(selectedEvents))
+                                    selectedEvents.removeAll()
+                                    isSelecting = false
+                                }
+                            } label: {
+                                Image(systemName: "trash")
                             }
-                        } label: {
-                            Image(systemName: "trash")
                         }
                     }
-                }
-            } else {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                } else {
                     Button("Select") { isSelecting = true }
                 }
             }

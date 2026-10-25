@@ -5,6 +5,7 @@
 //  Created by 686udjie on 20/08/2026.
 //
 
+import Combine
 import SwiftUI
 
 protocol SettingsOption: CaseIterable, Hashable, Identifiable, RawRepresentable where RawValue == String {
@@ -132,26 +133,25 @@ struct AccentPreset: Identifiable, Hashable {
     ]
 }
 
-@Observable
-final class SettingsStore {
+final class SettingsStore: ObservableObject {
     static let shared = SettingsStore()
 
     // MARK: - Appearance
 
-    var themeMode: ThemeMode {
+    @Published var themeMode: ThemeMode {
         didSet { Self.defaults.set(themeMode.rawValue, forKey: Keys.themeMode) }
     }
 
-    var accentColor: Color = AccentPreset.all[0].color
+    @Published var accentColor: Color = AccentPreset.all[0].color
 
-    var accentName: String {
+    @Published var accentName: String {
         didSet {
             Self.defaults.set(accentName, forKey: Keys.accentName)
             accentColor = AccentPreset.all.first { $0.name == accentName }?.color ?? AccentPreset.all[0].color
         }
     }
 
-    var playerBackgroundStyle: PlayerBackgroundStyle {
+    @Published var playerBackgroundStyle: PlayerBackgroundStyle {
         didSet { Self.defaults.set(playerBackgroundStyle.rawValue, forKey: Keys.playerBackgroundStyle) }
     }
 
@@ -163,106 +163,106 @@ final class SettingsStore {
         }
     }
 
-    var defaultTab: Int {
+    @Published var defaultTab: Int {
         didSet { Self.defaults.set(defaultTab, forKey: Keys.defaultTab) }
     }
 
     // MARK: - Lyrics appearance
 
-    var lyricsFontSize: Double {
+    @Published var lyricsFontSize: Double {
         didSet { Self.defaults.set(lyricsFontSize, forKey: Keys.lyricsFontSize) }
     }
 
-    var lyricsAlignment: LyricsAlignment {
+    @Published var lyricsAlignment: LyricsAlignment {
         didSet { Self.defaults.set(lyricsAlignment.rawValue, forKey: Keys.lyricsAlignment) }
     }
 
     /// Shifts lyric timing by this many seconds (positive = later, negative = earlier).
-    var lyricsOffsetSeconds: Double {
+    @Published var lyricsOffsetSeconds: Double {
         didSet { Self.defaults.set(lyricsOffsetSeconds, forKey: Keys.lyricsOffsetSeconds) }
     }
 
     /// Shows a progress ring during long instrumental gaps in synced lyrics.
-    var showIntervalIndicator: Bool {
+    @Published var showIntervalIndicator: Bool {
         didSet { Self.defaults.set(showIntervalIndicator, forKey: Keys.showIntervalIndicator) }
     }
 
     /// Displays romanized lyrics for Japanese/Korean/Cyrillic lines when available.
-    var romanizeCurrentTrack: Bool {
+    @Published var romanizeCurrentTrack: Bool {
         didSet { Self.defaults.set(romanizeCurrentTrack, forKey: Keys.romanizeCurrentTrack) }
     }
 
     // MARK: - Playback
 
-    var equalizerEnabled: Bool {
+    @Published var equalizerEnabled: Bool {
         didSet { Self.defaults.set(equalizerEnabled, forKey: Keys.equalizerEnabled) }
     }
 
     /// The id of the selected preset, or "custom" when the user edited bands manually.
-    var equalizerPresetID: String {
+    @Published var equalizerPresetID: String {
         didSet { Self.defaults.set(equalizerPresetID, forKey: Keys.equalizerPresetID) }
     }
 
     /// Current band gains in dB, one per `equalizerFrequencies`.
-    var equalizerGains: [Double] {
+    @Published var equalizerGains: [Double] {
         didSet { Self.defaults.set(equalizerGains, forKey: Keys.equalizerGains) }
     }
 
-    var audioQuality: AudioQuality {
+    @Published var audioQuality: AudioQuality {
         didSet { Self.defaults.set(audioQuality.rawValue, forKey: Keys.audioQuality) }
     }
 
-    var audioNormalization: Bool {
+    @Published var audioNormalization: Bool {
         didSet { Self.defaults.set(audioNormalization, forKey: Keys.audioNormalization) }
     }
 
-    var gaplessPlayback: Bool {
+    @Published var gaplessPlayback: Bool {
         didSet { Self.defaults.set(gaplessPlayback, forKey: Keys.gaplessPlayback) }
     }
 
-    var autoplaySimilar: Bool {
+    @Published var autoplaySimilar: Bool {
         didSet { Self.defaults.set(autoplaySimilar, forKey: Keys.autoplaySimilar) }
     }
 
-    var persistQueue: Bool {
+    @Published var persistQueue: Bool {
         didSet { Self.defaults.set(persistQueue, forKey: Keys.persistQueue) }
     }
 
-    var lastRadioStyle: RadioStyle {
+    @Published var lastRadioStyle: RadioStyle {
         didSet { Self.defaults.set(lastRadioStyle.rawValue, forKey: Keys.lastRadioStyle) }
     }
 
-    var lastRadioLimit: Int {
+    @Published var lastRadioLimit: Int {
         didSet { Self.defaults.set(lastRadioLimit, forKey: Keys.lastRadioLimit) }
     }
 
-    var lastRadioAllowExplicit: Bool {
+    @Published var lastRadioAllowExplicit: Bool {
         didSet { Self.defaults.set(lastRadioAllowExplicit, forKey: Keys.lastRadioAllowExplicit) }
     }
 
-    var playerVolume: Double {
+    @Published var playerVolume: Double {
         didSet { Self.defaults.set(playerVolume, forKey: Keys.playerVolume) }
     }
 
-    var artworkSwipeNavigation: Bool {
+    @Published var artworkSwipeNavigation: Bool {
         didSet { Self.defaults.set(artworkSwipeNavigation, forKey: Keys.artworkSwipeNavigation) }
     }
 
     // MARK: - Content
 
-    var hideExplicit: Bool {
+    @Published var hideExplicit: Bool {
         didSet { Self.defaults.set(hideExplicit, forKey: Keys.hideExplicit) }
     }
 
-    var showQuickPicks: Bool {
+    @Published var showQuickPicks: Bool {
         didSet { Self.defaults.set(showQuickPicks, forKey: Keys.showQuickPicks) }
     }
 
-    var topListsLength: Int {
+    @Published var topListsLength: Int {
         didSet { Self.defaults.set(topListsLength, forKey: Keys.topListsLength) }
     }
 
-    var contentCountry: String {
+    @Published var contentCountry: String {
         didSet {
             Self.defaults.set(contentCountry, forKey: Keys.contentCountry)
             Task { await InnerTubeClient.tropShared.syncTropLocale() }
@@ -271,67 +271,67 @@ final class SettingsStore {
 
     // MARK: - Lyrics providers
 
-    var disabledLyricsProviders: Set<String> {
+    @Published var disabledLyricsProviders: Set<String> {
         didSet { Self.defaults.set(disabledLyricsProviders.sorted(), forKey: Keys.disabledLyricsProviders) }
     }
 
     // MARK: - Privacy
 
-    var trackSearchHistory: Bool {
+    @Published var trackSearchHistory: Bool {
         didSet { Self.defaults.set(trackSearchHistory, forKey: Keys.trackSearchHistory) }
     }
 
-    var trackPlayHistory: Bool {
+    @Published var trackPlayHistory: Bool {
         didSet { Self.defaults.set(trackPlayHistory, forKey: Keys.trackPlayHistory) }
     }
 
     // MARK: - Downloads & storage
 
-    var downloadQuality: DownloadQuality {
+    @Published var downloadQuality: DownloadQuality {
         didSet { Self.defaults.set(downloadQuality.rawValue, forKey: Keys.downloadQuality) }
     }
 
-    var wifiOnlyDownloads: Bool {
+    @Published var wifiOnlyDownloads: Bool {
         didSet { Self.defaults.set(wifiOnlyDownloads, forKey: Keys.wifiOnlyDownloads) }
     }
 
-    var autoDownloadOnLike: Bool {
+    @Published var autoDownloadOnLike: Bool {
         didSet { Self.defaults.set(autoDownloadOnLike, forKey: Keys.autoDownloadOnLike) }
     }
 
-    var autoDownloadNewEpisodes: Bool {
+    @Published var autoDownloadNewEpisodes: Bool {
         didSet { Self.defaults.set(autoDownloadNewEpisodes, forKey: Keys.autoDownloadNewEpisodes) }
     }
 
     // MARK: - Sync
 
-    var syncArtists: Bool {
+    @Published var syncArtists: Bool {
         didSet { Self.defaults.set(syncArtists, forKey: Keys.syncArtists) }
     }
 
-    var syncPlaylists: Bool {
+    @Published var syncPlaylists: Bool {
         didSet { Self.defaults.set(syncPlaylists, forKey: Keys.syncPlaylists) }
     }
 
-    var syncAlbums: Bool {
+    @Published var syncAlbums: Bool {
         didSet { Self.defaults.set(syncAlbums, forKey: Keys.syncAlbums) }
     }
 
-    var syncPodcasts: Bool {
+    @Published var syncPodcasts: Bool {
         didSet { Self.defaults.set(syncPodcasts, forKey: Keys.syncPodcasts) }
     }
 
-    var syncSongs: Bool {
+    @Published var syncSongs: Bool {
         didSet { Self.defaults.set(syncSongs, forKey: Keys.syncSongs) }
     }
 
     // MARK: - Spotify Canvas
 
-    var canvasEnabled: Bool {
+    @Published var canvasEnabled: Bool {
         didSet { Self.defaults.set(canvasEnabled, forKey: Keys.canvasEnabled) }
     }
 
-    var canvasOverCellular: Bool {
+    @Published var canvasOverCellular: Bool {
         didSet { Self.defaults.set(canvasOverCellular, forKey: Keys.canvasOverCellular) }
     }
 

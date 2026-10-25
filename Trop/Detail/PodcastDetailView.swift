@@ -5,18 +5,18 @@
 //  Created by 686udjie on 06/07/2026.
 //
 
+import Combine
 import SwiftUI
 
 // MARK: - View Model
 
 @MainActor
-@Observable
-final class PodcastDetailViewModel {
+final class PodcastDetailViewModel: ObservableObject {
     let browseId: String
-    var podcast: PodcastDetailInfo?
-    var isLoading = true
-    var error: Error?
-    var isSubscribed = false
+    @Published var podcast: PodcastDetailInfo?
+    @Published var isLoading = true
+    @Published var error: Error?
+    @Published var isSubscribed = false
 
     private let innerTube = InnerTubeClient.tropShared
 
@@ -414,7 +414,7 @@ extension PodcastDetailViewModel {
 
 struct PodcastDetailView: View {
     let browseId: String
-    @State private var viewModel: PodcastDetailViewModel
+    @StateObject private var viewModel: PodcastDetailViewModel
     @State private var pendingRoute: DetailRoute?
     @State private var showMoreSheet = false
 
@@ -422,7 +422,7 @@ struct PodcastDetailView: View {
 
     init(browseId: String) {
         self.browseId = browseId
-        _viewModel = State(initialValue: PodcastDetailViewModel(browseId: browseId))
+        _viewModel = StateObject(wrappedValue: PodcastDetailViewModel(browseId: browseId))
     }
 
     var body: some View {

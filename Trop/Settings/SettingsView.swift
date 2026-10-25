@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(SettingsStore.self) private var settings
-    @Bindable private var accountState = AccountSheetState.shared
+    @Environment(\.settingsStore) private var settings
+    @ObservedObject private var accountState = AccountSheetState.shared
 
     var body: some View {
         List {

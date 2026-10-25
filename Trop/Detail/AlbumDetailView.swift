@@ -5,18 +5,18 @@
 //  Created by 686udjie on 03/07/2026.
 //
 
+import Combine
 import SwiftUI
 
 // MARK: - View Model
 
 @MainActor
-@Observable
-final class AlbumDetailViewModel {
+final class AlbumDetailViewModel: ObservableObject {
     let browseId: String
-    var album: AlbumDetailInfo?
-    var isLoading = true
-    var error: Error?
-    var isSaved = false
+    @Published var album: AlbumDetailInfo?
+    @Published var isLoading = true
+    @Published var error: Error?
+    @Published var isSaved = false
 
     private let innerTube = InnerTubeClient.tropShared
 
@@ -250,7 +250,7 @@ extension AlbumDetailViewModel {
 
 struct AlbumDetailView: View {
     let browseId: String
-    @State private var viewModel: AlbumDetailViewModel
+    @StateObject private var viewModel: AlbumDetailViewModel
     @State private var pendingRoute: DetailRoute?
     @State private var showMoreSheet = false
 
@@ -258,7 +258,7 @@ struct AlbumDetailView: View {
 
     init(browseId: String) {
         self.browseId = browseId
-        _viewModel = State(initialValue: AlbumDetailViewModel(browseId: browseId))
+        _viewModel = StateObject(wrappedValue: AlbumDetailViewModel(browseId: browseId))
     }
 
     var body: some View {
@@ -325,7 +325,9 @@ struct AlbumDetailView: View {
                                 .foregroundColor(.secondary)
                         }
                         if let artistId = artist.id {
-                            NavigationLink(value: DetailRoute.artist(browseId: artistId)) {
+                            Button(action: {
+                                AppRouter.shared.open(.artist(browseId: artistId))
+                            }) {
                                 Text(artist.name)
                                     .font(.body)
                                     .fontWeight(.medium)

@@ -5,22 +5,23 @@
 //  Created by 686udjie on 19/08/2026.
 //
 
+import Combine
 import SwiftUI
 
 /// Shared state driving the mini player's inline (minimized) layout.
 /// The system's `tabViewBottomAccessoryPlacement` environment can lag behind
 /// the actual tab bar state on scroll-back, so the scroll containers set this
 /// directly to keep the mini player's content in sync with its position.
-@Observable
-final class MiniPlayerScrollState {
-    var isInline = false
+final class MiniPlayerScrollState: ObservableObject {
+    static let shared = MiniPlayerScrollState()
+    @Published var isInline = false
 }
 
 /// Flips `MiniPlayerScrollState.isInline` based on a scroll container's vertical
 /// offset, matching the system's tab bar minimize behavior: collapsing when the
 /// user scrolls down and restoring the moment they scroll back up.
 struct MiniPlayerInlineOnScrollModifier: ViewModifier {
-    @Environment(MiniPlayerScrollState.self) private var scrollState
+    @Environment(\.miniPlayerScrollState) private var scrollState
 
     private let compactThreshold: CGFloat = 1
 

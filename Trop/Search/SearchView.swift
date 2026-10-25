@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct SearchView: View {
-    @Environment(SettingsStore.self) private var settings
-    @State private var viewModel = SearchViewModel()
+    @Environment(\.settingsStore) private var settings
+    @StateObject private var viewModel = SearchViewModel()
     @ObservedObject private var router = AppRouter.shared
     @FocusState private var fieldFocused: Bool
 

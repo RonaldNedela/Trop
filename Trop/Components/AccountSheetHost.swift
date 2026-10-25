@@ -5,18 +5,18 @@
 //  Created by 686udjie on 2/07/2026.
 //
 
+import Combine
 import SwiftUI
 
 /// Shared account/session state for the app. Used by the tab headers
 /// (avatar) and the account section at the top of Settings.
 @MainActor
-@Observable
-final class AccountSheetState {
+final class AccountSheetState: ObservableObject {
     static let shared = AccountSheetState()
 
-    var accountName = "Guest"
-    var accountImageUrl: String?
-    var isLoginSheetPresented = false
+    @Published var accountName = "Guest"
+    @Published var accountImageUrl: String?
+    @Published var isLoginSheetPresented = false
     let loginModel = LoginViewModel()
 
     private let cookieStore = CookieStore()
@@ -106,7 +106,7 @@ final class AccountSheetState {
 }
 
 struct LoginSheetHost: ViewModifier {
-    @Bindable var state: AccountSheetState
+    @ObservedObject var state: AccountSheetState
     @ObservedObject private var loginModel = AccountSheetState.shared.loginModel
 
     func body(content: Content) -> some View {

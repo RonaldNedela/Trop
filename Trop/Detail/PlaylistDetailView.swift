@@ -5,22 +5,22 @@
 //  Created by 686udjie on 03/07/2026.
 //
 
+import Combine
 import SwiftUI
 import GRDB
 
 // MARK: - View Model
 
 @MainActor
-@Observable
-final class PlaylistDetailViewModel {
+final class PlaylistDetailViewModel: ObservableObject {
     let playlistId: String
-    var playlist: PlaylistDetailInfo?
-    var isLoading = true
-    var error: Error?
+    @Published var playlist: PlaylistDetailInfo?
+    @Published var isLoading = true
+    @Published var error: Error?
 
     let autoRoute: AutoPlaylistRoute?
-    var autoSongSort: LibrarySongSort = .recentlyAdded
-    var autoTopPeriod: TopPeriod = .allTime
+    @Published var autoSongSort: LibrarySongSort = .recentlyAdded
+    @Published var autoTopPeriod: TopPeriod = .allTime
 
     init(playlistId: String) {
         self.playlistId = playlistId
@@ -373,7 +373,7 @@ extension PlaylistDetailViewModel {
 
 struct PlaylistDetailView: View {
     let playlistId: String
-    @State private var viewModel: PlaylistDetailViewModel
+    @StateObject private var viewModel: PlaylistDetailViewModel
     @State private var playlistEntity: PlaylistEntity?
     @State private var showAddSongs = false
     @State private var showMoreSheet = false
@@ -383,12 +383,12 @@ struct PlaylistDetailView: View {
 
     init(playlistId: String) {
         self.playlistId = playlistId
-        _viewModel = State(initialValue: PlaylistDetailViewModel(playlistId: playlistId))
+        _viewModel = StateObject(wrappedValue: PlaylistDetailViewModel(playlistId: playlistId))
     }
 
     init(autoPlaylistRoute: AutoPlaylistRoute) {
         self.playlistId = ""
-        _viewModel = State(initialValue: PlaylistDetailViewModel(autoPlaylistRoute: autoPlaylistRoute))
+        _viewModel = StateObject(wrappedValue: PlaylistDetailViewModel(autoPlaylistRoute: autoPlaylistRoute))
     }
 
     var isEditable: Bool {
@@ -505,7 +505,9 @@ struct PlaylistDetailView: View {
             if let authorName = playlist.authorName {
                 Group {
                     if let authorId = playlist.authorBrowseId {
-                        NavigationLink(value: DetailRoute.artist(browseId: authorId)) {
+                        Button(action: {
+                            AppRouter.shared.open(.artist(browseId: authorId))
+                        }) {
                             authorRow(name: authorName, avatarUrl: playlist.authorAvatarUrl)
                         }
                         .buttonStyle(.plain)

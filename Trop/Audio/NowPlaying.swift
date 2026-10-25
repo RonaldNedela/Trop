@@ -6,47 +6,46 @@
 //
 
 import AVFoundation
+import Combine
 import Foundation
-import Observation
 import Nuke
 import SwiftUI
 
-@Observable
 @MainActor
-final class NowPlaying {
+final class NowPlaying: ObservableObject {
     static let shared = NowPlaying()
 
-    var title = ""
-    var artist = ""
-    var albumTitle = ""
-    var videoId: String?
-    var artists: [YTArtist] = []
-    var isPlaying = false
-    var currentTime: TimeInterval = 0
-    var duration: TimeInterval = 0
+    @Published var title = ""
+    @Published var artist = ""
+    @Published var albumTitle = ""
+    @Published var videoId: String?
+    @Published var artists: [YTArtist] = []
+    @Published var isPlaying = false
+    @Published var currentTime: TimeInterval = 0
+    @Published var duration: TimeInterval = 0
     var progress: Float {
         duration > 0 ? Float(currentTime / duration) : 0
     }
-    var thumbnailImage: Image?
-    var thumbnailUIImage: UIImage?
-    var thumbnailVersion = 0
-    var dominantColors: [Color] = [Color(red: 0.15, green: 0.15, blue: 0.2), Color(red: 0.05, green: 0.05, blue: 0.08)]
+    @Published var thumbnailImage: Image?
+    @Published var thumbnailUIImage: UIImage?
+    @Published var thumbnailVersion = 0
+    @Published var dominantColors: [Color] = [Color(red: 0.15, green: 0.15, blue: 0.2), Color(red: 0.05, green: 0.05, blue: 0.08)]
 
     var accentColor: Color? {
         guard videoId != nil, let primary = dominantColors.first else { return nil }
         return primary
     }
 
-    var queueSongs: [SongItem] = []
-    var queueIndex = 0
+    @Published var queueSongs: [SongItem] = []
+    @Published var queueIndex = 0
 
-    var isShuffleOn = false
-    var isRepeatOn = false
+    @Published var isShuffleOn = false
+    @Published var isRepeatOn = false
 
-    var hasVideo: Bool = false
-    var isVideoMode: Bool = false
-    var isVideoReady: Bool = false
-    var musicVideoType: String?
+    @Published var hasVideo: Bool = false
+    @Published var isVideoMode: Bool = false
+    @Published var isVideoReady: Bool = false
+    @Published var musicVideoType: String?
 
     private var originalQueue: [SongItem]?
 

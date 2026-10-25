@@ -5,14 +5,13 @@
 //  Created by 686udjie on 13/09/2026.
 //
 
+import Combine
 import Foundation
-import Observation
 
 /// Speed-dial pin state shared by the song and player menu sheets.
 /// Consolidates the identical `isPinned` + `loadStates` + `togglePin` trios.
-@Observable
-final class PinState {
-    var isPinned = false
+final class PinState: ObservableObject {
+    @Published var isPinned = false
 
     func load(videoId: String) async {
         isPinned = (try? await DatabaseService.shared.isPinnedToSpeedDial(videoId: videoId)) ?? false

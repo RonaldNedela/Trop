@@ -10,9 +10,9 @@ import SwiftUI
 struct FullPlayerView: View {
     let onCollapse: () -> Void
 
-    @Environment(SettingsStore.self) private var settings
+    @Environment(\.settingsStore) private var settings
     private let player = PlayerController.shared
-    @Bindable private var np = NowPlaying.shared
+    @ObservedObject private var np = NowPlaying.shared
     @State private var editingProgress: Float = 0
     @State private var isEditingSlider = false
     @State private var collapseOffset: CGFloat = 0

@@ -21,6 +21,7 @@ enum DetailRoute: Hashable, Identifiable {
         case .history: return "history"
         case .settings: return "settings"
         case .downloads: return "downloads"
+        case .mood(let mood): return "mood_\(mood.id)"
         }
     }
 
@@ -32,6 +33,7 @@ enum DetailRoute: Hashable, Identifiable {
     case history
     case settings
     case downloads
+    case mood(MoodItem)
 }
 
 /// Shared view resolving a `DetailRoute` to its target destination view.
@@ -56,6 +58,8 @@ struct DetailRouteDestinationView: View {
             SettingsView()
         case .downloads:
             DownloadsView()
+        case .mood(let mood):
+            MoodDetailView(mood: mood)
         }
     }
 }

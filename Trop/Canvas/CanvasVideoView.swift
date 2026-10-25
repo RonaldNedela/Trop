@@ -63,8 +63,9 @@ struct CanvasVideoView: View {
         let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
         generator.appliesPreferredTrackTransform = true
         do {
-            let (image, _) = try await generator.image(at: CMTime(seconds: 0.5, preferredTimescale: 600))
-            return UIImage(cgImage: image).extractDominantColors()
+            var actualTime = CMTime.zero
+            let cgImage = try generator.copyCGImage(at: CMTime(seconds: 0.5, preferredTimescale: 600), actualTime: &actualTime)
+            return UIImage(cgImage: cgImage).extractDominantColors()
         } catch {
             return nil
         }

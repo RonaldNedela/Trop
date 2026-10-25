@@ -5,6 +5,7 @@
 //  Created by 686udjie on 03/07/2026.
 //
 
+import Combine
 import Foundation
 import SwiftUI
 
@@ -29,8 +30,7 @@ enum SearchSort: String, CaseIterable {
 /// Results belong to the last *submitted* query and stay visible until a
 /// new submission replaces them.
 @MainActor
-@Observable
-final class SearchViewModel {
+final class SearchViewModel: ObservableObject {
 
     // MARK: - Phase
 
@@ -47,12 +47,12 @@ final class SearchViewModel {
         case failed
     }
 
-    private(set) var phase: Phase = .idle
+    @Published private(set) var phase: Phase = .idle
 
     // MARK: - Field & results
 
     /// Live text of the search field.
-    var fieldText = "" {
+    @Published var fieldText = "" {
         didSet {
             guard fieldText != oldValue else { return }
             handleFieldTextChange()
@@ -60,24 +60,24 @@ final class SearchViewModel {
     }
 
     /// Query whose results are currently held (if any).
-    private(set) var submittedQuery = ""
+    @Published private(set) var submittedQuery = ""
 
-    private(set) var results: [SearchSection] = []
+    @Published private(set) var results: [SearchSection] = []
 
     // MARK: - Local matches (populated per submission, for Library filter)
 
-    var localSongs: [SongEntity] = []
-    var localArtists: [ArtistEntity] = []
-    var localAlbums: [AlbumEntity] = []
-    var localPlaylists: [PlaylistEntity] = []
+    @Published var localSongs: [SongEntity] = []
+    @Published var localArtists: [ArtistEntity] = []
+    @Published var localAlbums: [AlbumEntity] = []
+    @Published var localPlaylists: [PlaylistEntity] = []
 
     // MARK: - Filtering & sorting
 
-    var selectedSectionFilter: String?
-    var isShowingLibrary = false
+    @Published var selectedSectionFilter: String?
+    @Published var isShowingLibrary = false
 
     /// Active result ordering (persisted).
-    var sort: SearchSort {
+    @Published var sort: SearchSort {
         didSet {
             guard sort != oldValue else { return }
             UserDefaults.standard.set(sort.rawValue, forKey: Self.sortKey)
@@ -88,8 +88,8 @@ final class SearchViewModel {
     }
 
     /// Artist hero for artist queries (top result is an artist).
-    private(set) var heroArtist: ArtistItem?
-    private(set) var heroSongs: [SongItem] = []
+    @Published private(set) var heroArtist: ArtistItem?
+    @Published private(set) var heroSongs: [SongItem] = []
 
     /// Latest play timestamp per videoId, for Recently Played sorting.
     /// Shared across instances — the search view model is recreated on tab
@@ -103,11 +103,11 @@ final class SearchViewModel {
 
     // MARK: - Submission outcome
 
-    var error: Error?
+    @Published var error: Error?
 
     // MARK: - History
 
-    var searchHistory: [SearchHistoryEntity] = []
+    @Published var searchHistory: [SearchHistoryEntity] = []
 
     private var fetchTask: Task<Void, Never>?
 

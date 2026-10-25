@@ -5,17 +5,17 @@
 //  Created by 686udjie on 16/07/2026.
 //
 
+import Combine
 import Foundation
 
-@Observable
 @MainActor
-final class LyricsSettings {
+final class LyricsSettings: ObservableObject {
     static let shared = LyricsSettings()
 
     private let orderKey = "lyricsProviderOrder"
 
     /// Ordered provider ids. Defaults to a sensible fallback chain.
-    var providerOrder: [String] = LyricsProviderRegistry.defaultOrder
+    @Published var providerOrder: [String] = LyricsProviderRegistry.defaultOrder
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: orderKey),

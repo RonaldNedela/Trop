@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct DownloadSettingsView: View {
-    @Environment(\.settingsStore) private var settings
+    @ObservedObject private var settings = SettingsStore.shared
     @ObservedObject private var downloadManager = DownloadManager.shared
     @State private var storageBytes: Int64 = 0
     @State private var trackCount = 0
@@ -16,8 +16,6 @@ struct DownloadSettingsView: View {
     }
 
     var body: some View {
-        @Bindable var settings = settings
-
         List {
             Section {
                 storageCard

@@ -10,12 +10,10 @@ import SwiftUI
 /// A Spotify-style equalizer: a line graph across 10 band frequencies whose
 /// points can be dragged up/down (±12 dB), plus a horizontal preset strip.
 struct EqualizerView: View {
-    @Environment(\.settingsStore) private var settings
+    @ObservedObject private var settings = SettingsStore.shared
     @State private var dragIndex: Int?
 
     var body: some View {
-        @Bindable var settings = settings
-
         ScrollView {
             VStack(spacing: 24) {
                 equalizerCard(settings: settings)
@@ -32,7 +30,6 @@ struct EqualizerView: View {
     // MARK: - Graph
 
     private func equalizerCard(settings: SettingsStore) -> some View {
-        @Bindable var settings = settings
         return VStack(spacing: 12) {
             HStack {
                 Text(settings.equalizerEnabled ? "Equalizer On" : "Equalizer Off")
@@ -73,7 +70,6 @@ struct EqualizerView: View {
     // MARK: - Presets
 
     private func presetStrip(settings: SettingsStore) -> some View {
-        @Bindable var settings = settings
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 ForEach(EqualizerPresets.all, id: \.id) { preset in

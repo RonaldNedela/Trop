@@ -22,6 +22,8 @@ struct PlayerMenuSheet: View {
         case similar
     }
 
+    @State private var activeDestination: Destination?
+
     // Loaded state
     @State private var pin = PinState()
     @State private var showPlaylistPicker = false
@@ -49,12 +51,12 @@ struct PlayerMenuSheet: View {
                     downloadRow
                 }
                 MenuCard {
-                    NavigationLink(value: Destination.details) {
+                    Button(action: { activeDestination = .details }) {
                         MenuRowLabel(icon: "info.circle", title: "Details", subtitle: "Metadata & stream information")
                     }
                     .buttonStyle(.plain)
                     Divider()
-                    NavigationLink(value: Destination.similar) {
+                    Button(action: { activeDestination = .similar }) {
                         MenuRowLabel(
                             icon: "dot.radiowaves.left.and.right",
                             title: "Similar to this song",
@@ -69,24 +71,40 @@ struct PlayerMenuSheet: View {
                         subtitle: "Style, size & explicit filter"
                     ) { showRadioOptions = true }
                 }
-            }
-            .navigationDestination(for: Destination.self) { dest in
-                switch dest {
-                case .equalizer:
-                    EqualizerView()
-                case .details:
-                    SongDetailsView(song: song)
-                case .similar:
-                    SimilarSongsView(
-                        song: song,
-                        onNavigate: { navigate($0) },
-                        onPlaySong: { similar, songs in
-                            dismiss()
-                            PlaybackQueue.play(similar, in: songs, log: Log.search, context: "SimilarTo tap")
-                            AppRouter.shared.expandPlayer()
-                        }
-                    )
-                }
+
+                NavigationLink(
+                    tag: Destination.equalizer,
+                    selection: $activeDestination,
+                    destination: { EqualizerView() },
+                    label: { EmptyView() }
+                )
+                .hidden()
+
+                NavigationLink(
+                    tag: Destination.details,
+                    selection: $activeDestination,
+                    destination: { SongDetailsView(song: song) },
+                    label: { EmptyView() }
+                )
+                .hidden()
+
+                NavigationLink(
+                    tag: Destination.similar,
+                    selection: $activeDestination,
+                    destination: {
+                        SimilarSongsView(
+                            song: song,
+                            onNavigate: { navigate($0) },
+                            onPlaySong: { similar, songs in
+                                dismiss()
+                                PlaybackQueue.play(similar, in: songs, log: Log.search, context: "SimilarTo tap")
+                                AppRouter.shared.expandPlayer()
+                            }
+                        )
+                    },
+                    label: { EmptyView() }
+                )
+                .hidden()
             }
         }
         .confirmationDialog("View Artist", isPresented: $showArtistPicker, titleVisibility: .visible) {
@@ -114,7 +132,7 @@ struct PlayerMenuSheet: View {
 
     private var eqVolumeCard: some View {
         HStack(spacing: 12) {
-            NavigationLink(value: Destination.equalizer) {
+            Button(action: { activeDestination = .equalizer }) {
                 Label("EQ", systemImage: "slider.horizontal.3")
                     .font(.subheadline.weight(.semibold))
                     .padding(.horizontal, 14)
@@ -122,6 +140,7 @@ struct PlayerMenuSheet: View {
                     .background(Capsule().fill(settings.accentColor.opacity(0.15)))
                     .foregroundStyle(settings.accentColor)
             }
+            .buttonStyle(.plain)
 
             Image(systemName: volumeIconName)
                 .font(.callout)

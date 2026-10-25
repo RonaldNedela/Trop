@@ -9,32 +9,41 @@ import Combine
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(SettingsStore.self) private var settings
-    @State private var nowPlaying = NowPlaying.shared
+    @ObservedObject private var settings = SettingsStore.shared
+    @ObservedObject private var nowPlaying = NowPlaying.shared
     @State private var selectedTab = SettingsStore.shared.defaultTab
     @State private var isExpanded = false
     @State private var scrollState = MiniPlayerScrollState()
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            Tab("Home", systemImage: "music.note.house.fill", value: 0) {
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
                 HomeScreenView()
-            }
+                    .tabItem {
+                        Label("Home", systemImage: "music.note.house.fill")
+                    }
+                    .tag(0)
 
-            Tab("Library", systemImage: "music.note.square.stack", value: 1) {
                 LibraryView()
-            }
+                    .tabItem {
+                        Label("Library", systemImage: "music.note.square.stack")
+                    }
+                    .tag(1)
 
-            Tab("Explore", systemImage: "flame", value: 2) {
                 ExploreView()
+                    .tabItem {
+                        Label("Explore", systemImage: "flame")
+                    }
+                    .tag(2)
+
+                SearchView()
+                    .tabItem {
+                        Label("Search", systemImage: "magnifyingglass")
+                    }
+                    .tag(3)
             }
 
-            Tab("Search", systemImage: "magnifyingglass", value: 3) {
-                SearchView()
-            }
-        }
-        .tabBarMinimizeBehavior(.never)
-            .tabViewBottomAccessory(isEnabled: nowPlaying.isBarPresented) {
+            if nowPlaying.isBarPresented {
                 MiniPlayerBarView(onExpand: {
                     // Dismiss the keyboard before expanding the player so the reveal is visible on the first tap.
                     UIApplication.shared.sendAction(
@@ -47,21 +56,25 @@ struct ContentView: View {
                         isExpanded = true
                     }
                 })
+                .padding(.bottom, 49)
+                .padding(.horizontal, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .background {
-                backgroundLayer
+        }
+        .background {
+            backgroundLayer
+        }
+        .overlay {
+            if isExpanded {
+                FullPlayerView(onCollapse: {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                        isExpanded = false
+                    }
+                })
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .overlay {
-                if isExpanded {
-                    FullPlayerView(onCollapse: {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                            isExpanded = false
-                        }
-                    })
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .environment(scrollState)
+        }
+        .environment(\.miniPlayerScrollState, scrollState)
         .onAppear { AppRouter.shared.selectedTabIndex = selectedTab }
         .onChange(of: selectedTab) { _, newValue in
             AppRouter.shared.selectedTabIndex = newValue

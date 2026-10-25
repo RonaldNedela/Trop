@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CanvasSettingsView: View {
-    @Environment(SettingsStore.self) private var settings
+    @ObservedObject private var settings = SettingsStore.shared
 
     @State private var showWebView = false
     @State private var isBusy = false
@@ -19,7 +19,6 @@ struct CanvasSettingsView: View {
     private var isLoggedIn: Bool { profile != nil || hasSession }
 
     var body: some View {
-        @Bindable var settings = settings
         List {
             Section {
                 if isLoggedIn {
