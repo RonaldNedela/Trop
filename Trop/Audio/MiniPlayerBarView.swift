@@ -73,6 +73,19 @@ struct MiniPlayerBarView: View {
         .frame(height: barHeight)
         .frame(maxWidth: .infinity)
         .overlay(alignment: .bottom) { progressLine }
+        .background(
+            ZStack {
+                Capsule()
+                    .fill(Color(UIColor.secondarySystemGroupedBackground).opacity(isDarkMode ? 0.75 : 0.90))
+                Capsule()
+                    .fill(.ultraThinMaterial)
+            }
+            .overlay(
+                Capsule()
+                    .strokeBorder(Color.white.opacity(isDarkMode ? 0.15 : 0.35), lineWidth: 0.5)
+            )
+            .shadow(color: Color.black.opacity(isDarkMode ? 0.45 : 0.18), radius: 8, x: 0, y: 3)
+        )
         .clipShape(Capsule())
         .onChange(of: np.videoId) { _, _ in
             dragOffset = 0
@@ -183,11 +196,16 @@ struct MiniPlayerBarView: View {
     private var progressLine: some View {
         GeometryReader { geo in
             let progressWidth = max(0, min(geo.size.width, geo.size.width * CGFloat(np.progress)))
-            Rectangle()
-                .fill(.tint)
-                .frame(width: progressWidth, height: 2)
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.08))
+                Rectangle()
+                    .fill(Color.accentColor)
+                    .frame(width: progressWidth)
+            }
+            .frame(height: 2.5)
         }
-        .frame(height: 2)
+        .frame(height: 2.5)
         .allowsHitTesting(false)
     }
 

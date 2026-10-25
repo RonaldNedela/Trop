@@ -201,6 +201,7 @@ struct SearchView: View {
                         .padding(.leading, 16)
                 }
             }
+            .padding(.bottom, NowPlaying.shared.isBarPresented ? 72 : 16)
         }
         .scrollIndicators(.automatic)
         .miniPlayerTracksScroll()
@@ -236,7 +237,7 @@ struct SearchView: View {
                     }
                 }
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, NowPlaying.shared.isBarPresented ? 72 : 16)
         }
         .scrollIndicators(.automatic)
         .miniPlayerTracksScroll()

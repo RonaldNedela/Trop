@@ -10,6 +10,7 @@ import SwiftUI
 struct ExploreView: View {
     @StateObject private var viewModel = ExploreViewModel()
     @ObservedObject private var router = AppRouter.shared
+    @ObservedObject private var nowPlaying = NowPlaying.shared
 
     @State private var pendingRoute: DetailRoute?
 
@@ -79,7 +80,7 @@ struct ExploreView: View {
     private var sectionsList: some View {
         ScrollView {
             ExploreSectionsList(sections: viewModel.sections, pendingRoute: $pendingRoute)
-                .padding(.bottom, 16)
+                .padding(.bottom, nowPlaying.isBarPresented ? 72 : 16)
         }
         .scrollIndicators(.automatic)
         .miniPlayerTracksScroll()
@@ -121,14 +122,9 @@ struct ExploreSectionsList: View {
 
     /// Song rows in a 4-row grid scrolling horizontally.
     private func songGrid(_ section: ExploreSection) -> some View {
-        HorizontalSection(title: section.title) {
+        HorizontalSection(title: section.title, vSpacing: 8, contentVerticalPadding: 0) {
             LazyHGrid(
-                rows: [
-                    GridItem(.flexible(), spacing: 0),
-                    GridItem(.flexible(), spacing: 0),
-                    GridItem(.flexible(), spacing: 0),
-                    GridItem(.flexible(), spacing: 0)
-                ],
+                rows: Array(repeating: GridItem(.fixed(60), spacing: 0), count: 4),
                 spacing: 12
             ) {
                 ForEach(section.items, id: \.id) { item in
@@ -138,6 +134,7 @@ struct ExploreSectionsList: View {
                     .frame(width: 320, alignment: .leading)
                 }
             }
+            .frame(height: 240)
         }
     }
 
@@ -162,7 +159,10 @@ struct ExploreSectionsList: View {
             // Two-row grid scrolling horizontally: all 50+ moods reachable
             // without a dominating vertical wall.
             LazyHGrid(
-                rows: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                rows: [
+                    GridItem(.fixed(64), spacing: 10),
+                    GridItem(.fixed(64), spacing: 10)
+                ],
                 spacing: 10
             ) {
                 ForEach(section.moods) { mood in
@@ -176,7 +176,7 @@ struct ExploreSectionsList: View {
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
                             .frame(width: 150)
-                            .frame(minHeight: 64)
+                            .frame(height: 64)
                             .padding(.horizontal, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
@@ -186,6 +186,7 @@ struct ExploreSectionsList: View {
                     .buttonStyle(.plain)
                 }
             }
+            .frame(height: 138)
         }
     }
 

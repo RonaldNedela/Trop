@@ -56,7 +56,7 @@ struct ContentView: View {
                         isExpanded = true
                     }
                 })
-                .padding(.bottom, 49)
+                .padding(.bottom, 55)
                 .padding(.horizontal, 8)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }

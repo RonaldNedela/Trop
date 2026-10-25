@@ -23,6 +23,7 @@ struct LibraryView: View {
 
     @ObservedObject private var router = AppRouter.shared
     @ObservedObject private var downloadManager = DownloadManager.shared
+    @ObservedObject private var nowPlaying = NowPlaying.shared
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -87,7 +88,8 @@ struct LibraryView: View {
                 })
                 .accessibilityLabel("Create playlist")
                 .padding(.trailing, 20)
-                .padding(.bottom, 20)
+                .padding(.bottom, nowPlaying.isBarPresented ? 76 : 20)
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: nowPlaying.isBarPresented)
             }
             .overlay {
                 if showCreateDialog {
@@ -173,6 +175,7 @@ struct LibraryView: View {
                     if !podcasts.isEmpty { podcastsSection }
                 }
             }
+            .padding(.bottom, nowPlaying.isBarPresented ? 72 : 16)
         }
         .scrollIndicators(.automatic)
         .miniPlayerTracksScroll()

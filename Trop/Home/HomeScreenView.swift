@@ -100,6 +100,7 @@ struct HomeScreenView: View {
                 }
                 .frame(height: 1)
             }
+            .padding(.bottom, NowPlaying.shared.isBarPresented ? 72 : 16)
         }
         .scrollIndicators(.automatic)
         .miniPlayerTracksScroll()
