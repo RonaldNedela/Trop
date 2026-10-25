@@ -114,7 +114,6 @@ struct LoginSheetHost: ViewModifier {
             .sheet(isPresented: $state.isLoginSheetPresented) {
                 NavigationStack {
                     LoginWebView(model: state.loginModel)
-                        .ignoresSafeArea()
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Cancel") { state.isLoginSheetPresented = false }

@@ -41,6 +41,14 @@ struct DetailRouteDestinationView: View {
     let route: DetailRoute
 
     var body: some View {
+        destination
+            .onAppear {
+                FileLog.shared.appendImmediate("Navigation", "INFO", "DetailRouteDestinationView appeared for \(route.id)")
+            }
+    }
+
+    @ViewBuilder
+    private var destination: some View {
         switch route {
         case .album(let browseId):
             AlbumDetailView(browseId: browseId)

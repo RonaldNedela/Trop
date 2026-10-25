@@ -17,13 +17,13 @@ struct LoadingStateView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Spacer()
             ProgressView()
             Text(message)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-            Spacer()
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 80)
     }
 }
 
@@ -42,14 +42,13 @@ struct DetailStateContainer<Data, Content: View>: View {
         Group {
             if isLoading {
                 LoadingStateView("Loading \(noun)...")
-                    .containerRelativeFrame(.vertical)
             } else if let error = error {
                 ContentUnavailableView(
                     "Couldn't load \(noun)",
                     systemImage: "exclamationmark.circle",
                     description: Text(error.localizedDescription)
                 )
-                .containerRelativeFrame(.vertical)
+                .padding(.vertical, 60)
             } else if let data = data {
                 content(data)
             } else {
@@ -58,7 +57,7 @@ struct DetailStateContainer<Data, Content: View>: View {
                     systemImage: emptyIcon,
                     description: Text("Could not parse \(noun) details")
                 )
-                .containerRelativeFrame(.vertical)
+                .padding(.vertical, 60)
             }
         }
     }

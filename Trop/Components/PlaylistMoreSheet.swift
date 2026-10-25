@@ -10,6 +10,7 @@ import SwiftUI
 struct PlaylistMoreSheet: View {
     let playlist: PlaylistDetailInfo
     var onSync: (() -> Void)?
+    var onAddSongs: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @State private var showEditAlert = false
@@ -18,6 +19,17 @@ struct PlaylistMoreSheet: View {
     var body: some View {
         SheetChrome {
             MenuCard {
+                if let onAddSongs {
+                    MenuRow(
+                        icon: "plus",
+                        title: "Add Songs",
+                        subtitle: "Add songs to this playlist"
+                    ) {
+                        onAddSongs()
+                        dismiss()
+                    }
+                    Divider()
+                }
                 MenuRow(
                     icon: "pencil",
                     title: "Edit",

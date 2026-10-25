@@ -185,6 +185,7 @@ struct LibraryView: View {
             ForEach(autoPlaylists) { info in
                 if let detailRoute = info.detailRoute {
                     Button {
+                        FileLog.shared.appendImmediate("Library", "INFO", "Tapped auto-playlist \(info.title) (detailRoute)")
                         router.libraryPath.append(detailRoute)
                     } label: {
                         autoPlaylistCell(info: info)
@@ -192,6 +193,7 @@ struct LibraryView: View {
                     .buttonStyle(.plain)
                 } else if let route = info.route {
                     Button {
+                        FileLog.shared.appendImmediate("Library", "INFO", "Tapped auto-playlist \(info.title) (route)")
                         router.libraryPath.append(DetailRoute.autoPlaylist(route))
                     } label: {
                         autoPlaylistCell(info: info)
@@ -201,24 +203,30 @@ struct LibraryView: View {
             }
 
             ForEach(playlists, id: \.id) { playlist in
-                Button {
-                    router.libraryPath.append(DetailRoute.playlist(playlistId: playlist.id))
+                playlistCell(playlist: playlist)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func playlistCell(playlist: PlaylistEntity) -> some View {
+        Button {
+            FileLog.shared.appendImmediate("Library", "INFO", "Tapped user playlist: \(playlist.name) id=\(playlist.id)")
+            router.libraryPath.append(DetailRoute.playlist(playlistId: playlist.id))
+        } label: {
+            itemCell(
+                url: playlist.thumbnailUrl,
+                title: playlist.name,
+                subtitle: playlistSongCounts[playlist.id].map { "\($0) songs" }
+            )
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            if playlist.isEditable {
+                Button(role: .destructive) {
+                    playlistToDelete = playlist
                 } label: {
-                    itemCell(
-                        url: playlist.thumbnailUrl,
-                        title: playlist.name,
-                        subtitle: playlistSongCounts[playlist.id].map { "\($0) songs" }
-                    )
-                }
-                .buttonStyle(.plain)
-                .contextMenu {
-                    if playlist.isEditable {
-                        Button(role: .destructive) {
-                            playlistToDelete = playlist
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
+                    Label("Delete", systemImage: "trash")
                 }
             }
         }

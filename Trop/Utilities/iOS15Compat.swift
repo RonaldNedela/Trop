@@ -105,10 +105,13 @@ private struct NavigationRootWithStack<Root: View>: View {
                     if let r1 = path.routes.first {
                         DetailRouteDestinationView(route: r1)
                             .background(NavigationLevel2(path: $path))
+                    } else {
+                        EmptyView()
                     }
                 },
                 label: { EmptyView() }
             )
+            .isDetailLink(false)
             .hidden()
         }
     }
@@ -127,10 +130,13 @@ private struct NavigationLevel2: View {
                 if path.routes.count >= 2 {
                     DetailRouteDestinationView(route: path.routes[1])
                         .background(NavigationLevel3(path: $path))
+                } else {
+                    EmptyView()
                 }
             },
             label: { EmptyView() }
         )
+        .isDetailLink(false)
         .hidden()
     }
 }
@@ -147,10 +153,13 @@ private struct NavigationLevel3: View {
             destination: {
                 if path.routes.count >= 3 {
                     DetailRouteDestinationView(route: path.routes[2])
+                } else {
+                    EmptyView()
                 }
             },
             label: { EmptyView() }
         )
+        .isDetailLink(false)
         .hidden()
     }
 }
@@ -187,7 +196,7 @@ struct ContentUnavailableView<Label: View, Description: View, Actions: View>: Vi
         }
         .multilineTextAlignment(.center)
         .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -272,7 +281,7 @@ extension View {
     func containerRelativeFrame(_ axes: Axis.Set, alignment: Alignment = .center) -> some View {
         self.frame(
             maxWidth: axes.contains(.horizontal) ? .infinity : nil,
-            maxHeight: axes.contains(.vertical) ? .infinity : nil,
+            minHeight: axes.contains(.vertical) ? 350 : nil,
             alignment: alignment
         )
     }

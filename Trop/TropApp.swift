@@ -13,6 +13,7 @@ struct TropApp: App {
     @StateObject private var settings = SettingsStore.shared
 
     init() {
+        CrashHandler.setup()
         configureNuke()
         ensureDirectories()
         Log.wireSwiftyTube()

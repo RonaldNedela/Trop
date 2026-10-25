@@ -35,6 +35,7 @@ final class PlaylistDetailViewModel: ObservableObject {
     /// Fetches every playlist page from InnerTube and parses the response.
     /// Prependes "VL" to the playlistId if not already present (required by the browse endpoint).
     func load() async {
+        FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "load() started. playlistId='\(playlistId)', autoRoute=\(String(describing: autoRoute))")
         if let route = autoRoute {
             await loadAutoPlaylist(route: route)
             return
@@ -46,13 +47,16 @@ final class PlaylistDetailViewModel: ObservableObject {
         // Check if this is a local-only playlist
         if let entity = try? await DatabaseService.shared.fetchOne(PlaylistEntity.self, key: playlistId),
            entity.browseId == nil {
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "Identified as local-only playlist: \(entity.name)")
             await loadLocalPlaylist(entity: entity)
             return
         }
 
         do {
             let browseId = playlistId.hasPrefix("VL") ? playlistId : "VL\(playlistId)"
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "Fetching remote playlist browseId='\(browseId)'")
             let (firstPage, rows) = try await SyncBridge.playlistDetail.fetchPlaylistRows(playlistId: playlistId)
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "Fetched \(rows.count) rows, parsing detail...")
             let parsed = Self.parsePlaylistDetail(firstPage: firstPage, rows: rows, playlistId: playlistId)
 
             // Persist songs to the song table so they become searchable in the library
@@ -98,7 +102,9 @@ final class PlaylistDetailViewModel: ObservableObject {
 
             playlist = parsed
             isLoading = false
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "Successfully loaded playlist '\(parsed.title)' with \(parsed.songs.count) songs")
         } catch {
+            FileLog.shared.appendImmediate("PlaylistDetail", "ERROR", "Failed to load playlist: \(error)")
             self.error = error
             isLoading = false
         }
@@ -106,6 +112,7 @@ final class PlaylistDetailViewModel: ObservableObject {
 
     private func loadLocalPlaylist(entity: PlaylistEntity) async {
         do {
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "loadLocalPlaylist for id='\(playlistId)'")
             // Fetch songs from playlist_song_map joined with song table
             let songs = try await DatabaseService.shared.fetchAll(
                 SongEntity.self,
@@ -132,7 +139,9 @@ final class PlaylistDetailViewModel: ObservableObject {
                 songs: songItems
             )
             isLoading = false
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "loadLocalPlaylist complete with \(songItems.count) songs")
         } catch {
+            FileLog.shared.appendImmediate("PlaylistDetail", "ERROR", "loadLocalPlaylist failed: \(error)")
             self.error = error
             isLoading = false
         }
@@ -142,6 +151,7 @@ final class PlaylistDetailViewModel: ObservableObject {
         isLoading = true
         error = nil
         do {
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "loadAutoPlaylist started for route=\(route)")
             let entities: [SongEntity]
             let title: String
             switch route {
@@ -159,23 +169,10 @@ final class PlaylistDetailViewModel: ObservableObject {
             }
             var songs = entities.toSongItems()
 
-            // Resolve missing durations in background
-            let emptyDurationIds = songs.filter { $0.duration <= 0 }.map { $0.videoId }
-            if !emptyDurationIds.isEmpty {
-                await withTaskGroup(of: (String, Int).self) { group in
-                    for videoId in emptyDurationIds {
-                        guard !DurationCache.isPending(videoId) else { continue }
-                        if let cached = DurationCache.get(videoId), cached > 0 { continue }
-                        group.addTask {
-                            let duration = await InnerTubeClient.tropShared.resolveDuration(videoId: videoId) ?? 0
-                            return (videoId, duration)
-                        }
-                    }
-                }
-                for i in songs.indices where songs[i].duration <= 0 {
-                    if let cached = DurationCache.get(songs[i].videoId), cached > 0 {
-                        songs[i].duration = cached
-                    }
+            // Resolve cached durations without blocking or spawning concurrent TaskGroup on iOS 15
+            for i in songs.indices where songs[i].duration <= 0 {
+                if let cached = DurationCache.get(songs[i].videoId), cached > 0 {
+                    songs[i].duration = cached
                 }
             }
 
@@ -194,7 +191,9 @@ final class PlaylistDetailViewModel: ObservableObject {
                 songs: songs
             )
             isLoading = false
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "loadAutoPlaylist complete for '\(title)' with \(songs.count) songs")
         } catch {
+            FileLog.shared.appendImmediate("PlaylistDetail", "ERROR", "loadAutoPlaylist failed: \(error)")
             self.error = error
             isLoading = false
         }
@@ -372,23 +371,37 @@ extension PlaylistDetailViewModel {
 // MARK: - View
 
 struct PlaylistDetailView: View {
+    private enum ActiveSheet: Identifiable {
+        case addSongs
+        case more(PlaylistDetailInfo)
+        case route(DetailRoute)
+
+        var id: String {
+            switch self {
+            case .addSongs: return "addSongs"
+            case .more(let info): return "more_\(info.playlistId)_\(info.title)"
+            case .route(let route): return "route_\(route.id)"
+            }
+        }
+    }
+
     let playlistId: String
     @StateObject private var viewModel: PlaylistDetailViewModel
     @State private var playlistEntity: PlaylistEntity?
-    @State private var showAddSongs = false
-    @State private var showMoreSheet = false
-    @State private var pendingRoute: DetailRoute?
+    @State private var activeSheet: ActiveSheet?
 
     @Environment(\.dismiss) private var dismiss
 
     init(playlistId: String) {
         self.playlistId = playlistId
         _viewModel = StateObject(wrappedValue: PlaylistDetailViewModel(playlistId: playlistId))
+        FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "PlaylistDetailView.init(playlistId: '\(playlistId)')")
     }
 
     init(autoPlaylistRoute: AutoPlaylistRoute) {
         self.playlistId = ""
         _viewModel = StateObject(wrappedValue: PlaylistDetailViewModel(autoPlaylistRoute: autoPlaylistRoute))
+        FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "PlaylistDetailView.init(autoPlaylistRoute: '\(autoPlaylistRoute)')")
     }
 
     var isEditable: Bool {
@@ -396,41 +409,56 @@ struct PlaylistDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            DetailStateContainer(
-                isLoading: viewModel.isLoading,
-                error: viewModel.error,
-                data: viewModel.playlist,
-                noun: "playlist",
-                emptyIcon: "music.note.list"
-            ) { playlist in
-                playlistContent(for: playlist)
+        Group {
+            if viewModel.isLoading {
+                LoadingStateView("Loading playlist...")
+            } else if let error = viewModel.error {
+                ContentUnavailableView(
+                    "Couldn't load playlist",
+                    systemImage: "exclamationmark.circle",
+                    description: Text(error.localizedDescription)
+                )
+                .padding(.top, 60)
+            } else if let playlist = viewModel.playlist {
+                ScrollView {
+                    playlistContent(for: playlist)
+                }
+                .miniPlayerTracksScroll()
+            } else {
+                ContentUnavailableView(
+                    "No playlist data",
+                    systemImage: "music.note.list",
+                    description: Text("Could not parse playlist details")
+                )
+                .padding(.top, 60)
             }
         }
-        .scrollDisabled(viewModel.isLoading || viewModel.error != nil || viewModel.playlist == nil)
-        .miniPlayerTracksScroll()
         .navigationTitle(viewModel.playlist?.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if isEditable {
-                ToolbarItem(placement: .primaryAction) {
-                                        Button(action: { showAddSongs = true }, label: {
-                        Image(systemName: "plus")
-                    })
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addSongs:
+                AddSongToPlaylistView(playlistId: playlistId) {
+                    await viewModel.load()
+                }
+            case .more(let playlist):
+                PlaylistMoreSheet(
+                    playlist: playlist,
+                    onSync: { Task { await viewModel.load() } },
+                    onAddSongs: isEditable ? { activeSheet = .addSongs } : nil
+                )
+            case .route(let route):
+                NavigationStack {
+                    DetailRouteDestinationView(route: route)
                 }
             }
         }
-        .sheet(isPresented: $showAddSongs) {
-            AddSongToPlaylistView(playlistId: playlistId) {
-                await viewModel.load()
-            }
-        }
         .task {
+            FileLog.shared.appendImmediate("PlaylistDetail", "INFO", "PlaylistDetailView.task started for playlistId='\(playlistId)', isLoading=\(viewModel.isLoading)")
             guard viewModel.isLoading else { return }
             await fetchEntity()
             await viewModel.load()
         }
-        .detailRouteSheet(item: $pendingRoute)
     }
 
     private func fetchEntity() async {
@@ -475,7 +503,7 @@ struct PlaylistDetailView: View {
                     HeroArtworkView(url: firstArtwork)
                 } else {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 200, height: 200)
                         .overlay(
                             Image(systemName: "music.note.list")
@@ -498,7 +526,7 @@ struct PlaylistDetailView: View {
             if !metaParts.isEmpty {
                 Text(metaParts.joined(separator: " | "))
                     .font(.subheadline)
-                    .foregroundStyle(.tertiary)
+                    .foregroundColor(.secondary)
             }
 
             // Author row: avatar + name, clickable → artist detail
@@ -532,16 +560,10 @@ struct PlaylistDetailView: View {
                 showsMore: true,
                 onPlay: { playAll(playlist) },
                 onShuffle: { shufflePlay(playlist) },
-                onMore: { showMoreSheet = true }
+                onMore: { activeSheet = .more(playlist) }
             )
         }
         .padding(.vertical, 16)
-        .sheet(isPresented: $showMoreSheet) {
-            PlaylistMoreSheet(
-                playlist: playlist,
-                onSync: { Task { await viewModel.load() } }
-            )
-        }
     }
 
     @ViewBuilder
@@ -578,7 +600,7 @@ struct PlaylistDetailView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .onChange(of: viewModel.autoSongSort) {
+                .onChange(of: viewModel.autoSongSort) { _ in
                     Task { await viewModel.load() }
                 }
             case .topSongs:
@@ -591,7 +613,7 @@ struct PlaylistDetailView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .onChange(of: viewModel.autoTopPeriod) {
+                .onChange(of: viewModel.autoTopPeriod) { _ in
                     Task { await viewModel.load() }
                 }
             case nil:
@@ -604,24 +626,35 @@ struct PlaylistDetailView: View {
 
     @ViewBuilder
     private func songList(for playlist: PlaylistDetailInfo) -> some View {
-        VStack(spacing: 0) {
+        LazyVStack(spacing: 0) {
             ForEach(Array(playlist.songs.enumerated()), id: \.offset) { index, song in
-                SongRowView(song: song, onTap: { playSong(song, in: playlist) }, onNavigate: { pendingRoute = $0 })
-                .contextMenu {
-                    if isEditable {
-                        Button(role: .destructive) {
-                            Task { await removeSong(song) }
-                        } label: {
-                            Label("Remove from Playlist", systemImage: "minus.circle")
-                        }
-                    }
-                }
+                songRow(song: song, in: playlist)
 
                 if index < playlist.songs.count - 1 {
                     Divider()
                         .padding(.leading, 68)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func songRow(song: SongItem, in playlist: PlaylistDetailInfo) -> some View {
+        let row = SongRowView(
+            song: song,
+            onTap: { playSong(song, in: playlist) },
+            onNavigate: { activeSheet = .route($0) }
+        )
+        if isEditable {
+            row.contextMenu {
+                Button(role: .destructive) {
+                    Task { await removeSong(song) }
+                } label: {
+                    Label("Remove from Playlist", systemImage: "minus.circle")
+                }
+            }
+        } else {
+            row
         }
     }
 
@@ -737,7 +770,7 @@ struct AddSongToPlaylistView: View {
             .navigationTitle("Add Songs")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") { dismiss() }
                 }
             }

@@ -41,10 +41,28 @@ final class FileLog {
                         defer { try? handle.close() }
                         _ = try? handle.seekToEnd()
                         try? handle.write(contentsOf: data)
+                        try? handle.synchronizeFile()
                     } else {
                         try? data.write(to: url, options: .atomic)
                     }
                 }
+            }
+        }
+    }
+
+    func appendImmediate(_ category: String, _ level: String, _ message: String) {
+        let stamp = Self.formatter.string(from: Date())
+        let line = "\(stamp) [\(level)][\(category)] \(message)\n"
+        print(line)
+        guard let url = fileURL else { return }
+        if let data = line.data(using: .utf8) {
+            if let handle = try? FileHandle(forWritingTo: url) {
+                defer { try? handle.close() }
+                _ = try? handle.seekToEnd()
+                try? handle.write(contentsOf: data)
+                try? handle.synchronizeFile()
+            } else {
+                try? data.write(to: url, options: .atomic)
             }
         }
     }
@@ -54,6 +72,40 @@ final class FileLog {
         formatter.dateFormat = "HH:mm:ss.SSS"
         return formatter
     }()
+}
+
+private func tropUncaughtExceptionHandler(exception: NSException) {
+    let symbols = exception.callStackSymbols.joined(separator: "\n")
+    let message = "CRASH: Uncaught Exception: \(exception.name) reason: \(exception.reason ?? "none")\nCallStack:\n\(symbols)\n"
+    FileLog.shared.appendImmediate("CRASH", "FATAL", message)
+    CrashHandler.writeEmergencyCrashReport(message)
+}
+
+private func tropSignalHandler(sig: Int32) {
+    let symbols = Thread.callStackSymbols.joined(separator: "\n")
+    let message = "CRASH: Fatal Signal \(sig)\nCallStack:\n\(symbols)\n"
+    FileLog.shared.appendImmediate("CRASH", "FATAL", message)
+    CrashHandler.writeEmergencyCrashReport(message)
+    signal(sig, SIG_DFL)
+    raise(sig)
+}
+
+public enum CrashHandler {
+    public static func setup() {
+        NSSetUncaughtExceptionHandler(tropUncaughtExceptionHandler)
+        signal(SIGSEGV, tropSignalHandler)
+        signal(SIGBUS, tropSignalHandler)
+        signal(SIGABRT, tropSignalHandler)
+        signal(SIGILL, tropSignalHandler)
+        signal(SIGTRAP, tropSignalHandler)
+        FileLog.shared.appendImmediate("CrashHandler", "INFO", "CrashHandler initialized successfully (v2)")
+    }
+
+    public static func writeEmergencyCrashReport(_ message: String) {
+        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let url = docs.appendingPathComponent("crash.txt")
+        try? message.data(using: .utf8)?.write(to: url, options: .atomic)
+    }
 }
 
 struct AppLogger {
