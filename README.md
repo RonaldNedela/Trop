@@ -10,19 +10,21 @@ A free and open source YouTube Music client for iOS.
 
 ## Features
 
+- **iOS 15.0+ Support**: Fully backported for legacy devices (including iPhone 7 / A10 on iOS 15.8.8) with zero crashes.
 - No ads
 - SponsorBlock: skips sponsor reads, intros, outros and non-music sections (silence, talking)
 - Stream songs and videos from YouTube Music
 - Synced lyrics (Musixmatch, Netease, Kugou, LRCLIB, Genius)
 - Library sync (playlists, albums, artists, podcasts)
-- Downloads
+- Downloads & offline playback
 - Equalizer
 - Custom app icons and themes
 - Queue management and listening history
+- Google sign-in with Mobile Safari botguard bypass + manual session cookie import fallback
 
 ## Installation
 
-Requires iOS 26 or later and a YouTube Music account (sign in through the in-app web view).
+Requires iOS 15.0 or later (verified on iOS 15.8.8 / iPhone 7) and a YouTube Music account. Supports TrollStore, SideStore, AltStore, and Feather.
 
 ### Feather / AltStore / SideStore
 
